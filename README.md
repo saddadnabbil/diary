@@ -2,6 +2,8 @@
 
 A quiet diary with gentle writing prompts.
 
+![Diary: a quiet place to write, with the desktop entries view and the mobile dashboard](docs/cover.png)
+
 - Write with bold, italics, numbered and bulleted lists, and images (paste, drop or upload).
 - Highlight passages in an entry, in three colours, and add notes to them.
 - Calendar view: pick any past day and write on it.
