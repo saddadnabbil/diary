@@ -3,12 +3,22 @@
 import { useRouter } from "next/navigation";
 import { Button, OptionCard } from "@/components/ui";
 import { useSettings } from "@/hooks/use-settings";
+import { authClient } from "@/lib/auth-client";
 import { updateSettings } from "@/lib/db";
 
 export default function StoragePage() {
   const router = useRouter();
   const settings = useSettings();
   const mode = settings?.storageMode ?? "cloud";
+
+  // Cloud needs an account, so sign in first. Local works without one.
+  async function next() {
+    if (mode === "cloud") {
+      const { data } = await authClient.getSession();
+      if (!data) return router.push("/sign-in?new=1");
+    }
+    router.push("/onboarding/ai");
+  }
 
   return (
     <>
@@ -33,7 +43,7 @@ export default function StoragePage() {
       </div>
 
       <div className="mt-auto pt-10 md:mt-0 md:pt-8">
-        <Button className="w-full" onClick={() => router.push("/onboarding/ai")} disabled={!settings}>
+        <Button className="w-full" onClick={next} disabled={!settings}>
           Continue
         </Button>
       </div>

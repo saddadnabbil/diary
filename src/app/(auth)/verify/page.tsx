@@ -40,8 +40,8 @@ function VerifyForm() {
       setBusy(false);
       return setError("Could not start your session. Try again.");
     }
-    await adoptUser({ id: data.user.id, email: data.user.email });
-    router.push(await resolveStart(data.user));
+    const claimedGuest = await adoptUser({ id: data.user.id, email: data.user.email });
+    router.push(await resolveStart(data.user, claimedGuest));
   }
 
   async function resend() {
