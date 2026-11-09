@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
+/* Design tokens — mirror the "Diary tokens" variables in the Figma file. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --hl-bar-yellow: #eab308;
+  --hl-bar-green: #22c55e;
+  --hl-bar-pink: #ec4899;
+  --hl-yellow: #fff1a6;
+  --hl-green: #c9f0d3;
+  --hl-pink: #ffd3e0;
+  --bg: #ffffff;
+  --surface: #f7f7f7;
+  --surface-hover: #f0f0f0;
+  --fg: #181818;
+  --fg-2: #5d5d5d;
+  --fg-3: #8f8f8f;
+  --line: #ebebeb;
+  --primary: #181818;
+  --on-primary: #ffffff;
+  --success: #00a67d;
+}
+
+.dark {
+  --hl-yellow: rgba(250, 204, 21, 0.3);
+  --hl-green: rgba(74, 222, 128, 0.25);
+  --hl-pink: rgba(244, 114, 182, 0.28);
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --surface-hover: #202020;
+  --fg: #ececec;
+  --fg-2: #a8a8a8;
+  --fg-3: #6f6f6f;
+  --line: #2a2a2a;
+  --primary: #ffffff;
+  --on-primary: #181818;
+  --success: #2fcb9f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-success: var(--success);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+
+/* Big display headings: medium weight, strong negative tracking */
+.display {
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Rich text (entry bodies) */
+.rich .ProseMirror {
+  outline: none;
+}
+.rich .ProseMirror > * + * {
+  margin-top: 0.75rem;
+}
+.rich .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--fg-3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rich ul,
+.rich ol {
+  padding-left: 1.6rem;
+}
+.rich ul {
+  list-style: disc;
+}
+.rich ul ul {
+  list-style: circle;
+}
+.rich ul ul ul {
+  list-style: square;
+}
+.rich ol {
+  list-style: decimal;
+}
+.rich ol ol {
+  list-style: lower-alpha;
+}
+.rich ol ol ol {
+  list-style: lower-roman;
+}
+.rich li > p {
+  margin: 0;
+}
+.rich li + li,
+.rich li > ul,
+.rich li > ol {
+  margin-top: 0.25rem;
+}
+.rich strong {
+  font-weight: 650;
+}
+.rich em {
+  font-style: italic;
+}
+
+/* Highlights and notes */
+.rich mark.hl {
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  cursor: pointer;
+  box-decoration-break: clone;
+}
+.rich mark.hl[data-color="yellow"] { background: var(--hl-yellow); }
+.rich mark.hl[data-color="green"] { background: var(--hl-green); }
+.rich mark.hl[data-color="pink"] { background: var(--hl-pink); }
+.rich mark.hl[data-note]:not([data-note=""]) {
+  border-bottom: 2px solid color-mix(in srgb, var(--fg) 45%, transparent);
+}
+.rich mark.hl.flash {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
 }

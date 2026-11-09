@@ -1,0 +1,10 @@
+# Local secrets for `pnpm dev` / `pnpm preview`. Copy to .dev.vars (git-ignored).
+BETTER_AUTH_SECRET=replace-with-output-of-openssl-rand-base64-32
+
+# Resend (https://resend.com/api-keys). Needed in production. In development the sign-in code is just
+# printed in the terminal; set both lines below to really send it.
+# RESEND_API_KEY=re_...
+# SEND_REAL_EMAIL=true
+
+# Optional: enables the built-in DeepSeek model.
+# DEEPSEEK_API_KEY=
