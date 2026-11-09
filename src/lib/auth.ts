@@ -11,7 +11,7 @@ interface AuthError {
 /** Turn an auth error into something safe and helpful to show. */
 export function friendlyAuthError(error: AuthError | null | undefined, fallback: string): string {
   if (!error) return fallback;
-  if (error.status === 429) return "Too many attempts. Wait a few minutes and try again.";
+  if (error.status === 429) return error.message || "Too many attempts. Wait a few minutes and try again.";
   switch (error.code) {
     case "INVALID_OTP":
       return "That code is not right.";

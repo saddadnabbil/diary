@@ -1,6 +1,7 @@
 import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 import { sendSignInCode } from "./email";
 import { getDb, getEnv, isDev, type AppEnv } from "./env";
@@ -48,6 +49,19 @@ function build(env: AppEnv) {
       // Only Cloudflare's header: x-forwarded-for is client-controlled.
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", secure },
+    },
+
+    // Resend cooldown: a second code request for the same mailbox within 30 s is refused BEFORE a new
+    // code is generated. (Generating one first would silently invalidate the code already in the inbox.)
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/email-otp/send-verification-otp") return;
+        const email = typeof ctx.body?.email === "string" ? ctx.body.email : "";
+        if (!email) return;
+        const key = `otp-cooldown:${await sha256Hex(canonicalMailbox(email))}`;
+        const { allowed, retryAfter } = await rateLimit(getDb(), key, 1, 30);
+        if (!allowed) throw new APIError("TOO_MANY_REQUESTS", { message: `Wait ${retryAfter} seconds before requesting another code.` });
+      }),
     },
 
     plugins: [
