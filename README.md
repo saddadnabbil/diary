@@ -55,7 +55,11 @@ pnpm preview                        # http://localhost:8787
    pnpm exec wrangler secret put DEEPSEEK_API_KEY     # optional, for the built-in AI model
    ```
 6. **Origin.** Set `APP_URL` in `wrangler.jsonc` to your final `https://` address. The app refuses to start in production with a non-https `APP_URL`.
-7. `pnpm deploy`
+7. Deploy. `pnpm deploy` builds and uploads. Set `APP_URL` and `EMAIL_FROM` for the deploy, for example:
+   ```bash
+   pnpm exec opennextjs-cloudflare build
+   ./node_modules/.bin/wrangler deploy --var "APP_URL:https://diary.<your-subdomain>.workers.dev" --var "EMAIL_FROM:login@yourdomain.com"
+   ```
 8. **Recommended.** Add a Cloudflare WAF rate-limit rule for `/api/*`. The app also rate-limits per user and per IP inside D1, but a WAF rule stops floods earlier.
 
 ## Security model
