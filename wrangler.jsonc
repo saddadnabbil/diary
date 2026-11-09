@@ -28,6 +28,9 @@
     "EMAIL_FROM": "Diary <login@example.com>"
   },
 
+  // Custom domain. The zone must be on the same Cloudflare account. Remove or change for your own domain.
+  "routes": [{ "pattern": "diary.saddadnabbil.my.id", "custom_domain": true }],
+
   "observability": { "enabled": true }
   // Secrets (set with `wrangler secret put`): BETTER_AUTH_SECRET, RESEND_API_KEY, DEEPSEEK_API_KEY (optional)
 }

@@ -5,10 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { BackIcon } from "@/components/icons";
 import { Button, cx } from "@/components/ui";
-import { adoptUser, hasCloudData } from "@/lib/account";
+import { adoptUser, resolveStart } from "@/lib/account";
 import { requestCode, verifyCode } from "@/lib/auth";
 import { authClient } from "@/lib/auth-client";
-import { updateSettings } from "@/lib/db";
 
 const RESEND_SECONDS = 30;
 
@@ -42,13 +41,7 @@ function VerifyForm() {
       return setError("Could not start your session. Try again.");
     }
     await adoptUser({ id: data.user.id, email: data.user.email });
-    // Returning user on a new device: their diary is already in the cloud, so skip setup.
-    if (await hasCloudData()) {
-      await updateSettings({ storageMode: "cloud", onboarded: true, syncCursor: 0 });
-      router.push("/dashboard");
-      return;
-    }
-    router.push("/onboarding/storage");
+    router.push(await resolveStart(data.user));
   }
 
   async function resend() {

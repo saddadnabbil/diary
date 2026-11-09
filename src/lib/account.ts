@@ -26,3 +26,17 @@ export async function hasCloudData(): Promise<boolean> {
     return false;
   }
 }
+
+/** An account younger than this, with nothing in the cloud yet, is a new user who should see onboarding. */
+const NEW_ACCOUNT_MS = 60 * 60 * 1000;
+
+/**
+ * Decide where a signed-in user starts. Only a brand new account is sent through onboarding;
+ * anyone else (a returning user on a new device or browser) goes straight to their diary in cloud mode.
+ */
+export async function resolveStart(user: { createdAt: Date | string }): Promise<"/dashboard" | "/onboarding/storage"> {
+  const isNew = Date.now() - new Date(user.createdAt).getTime() < NEW_ACCOUNT_MS;
+  if (isNew && !(await hasCloudData())) return "/onboarding/storage";
+  await updateSettings({ storageMode: "cloud", onboarded: true, syncCursor: 0 });
+  return "/dashboard";
+}

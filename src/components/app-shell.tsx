@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useSettings } from "@/hooks/use-settings";
-import { adoptUser } from "@/lib/account";
+import { adoptUser, resolveStart } from "@/lib/account";
 import { authClient } from "@/lib/auth-client";
 import { signOutFlow } from "@/lib/sign-out";
 import { startSyncRunner } from "@/lib/sync";
@@ -37,7 +37,7 @@ export function AppGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isPending || !settings) return;
     if (!user) router.replace("/welcome");
-    else if (settings.ownerId === user.id && !settings.onboarded) router.replace("/onboarding/storage");
+    else if (settings.ownerId === user.id && !settings.onboarded) void resolveStart(user).then((to) => to !== "/dashboard" && router.replace(to));
   }, [isPending, settings, user, router]);
 
   const syncing = !!user && settings?.storageMode === "cloud" && settings.ownerId === user.id;

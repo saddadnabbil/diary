@@ -50,8 +50,8 @@ export default function EntriesPage() {
     <Page>
       <PageTitle sub={total ? `${total} ${total === 1 ? "entry" : "entries"} so far.` : undefined}>Your entries.</PageTitle>
 
-      <div className="mt-6 flex flex-col gap-3 md:mt-10 md:flex-row md:items-center md:justify-between">
-        <label className="flex items-center gap-2.5 rounded-full border border-line bg-bg px-4 py-2.5 text-fg-3 focus-within:border-fg md:w-60">
+      <div className="mt-6 flex flex-col gap-4 md:mt-10">
+        <label className="flex items-center gap-2.5 rounded-full border border-line bg-bg px-4 py-2.5 text-fg-3 focus-within:border-fg md:max-w-sm">
           <SearchIcon size={18} />
           <span className="sr-only">Search entries</span>
           <input
@@ -62,7 +62,7 @@ export default function EntriesPage() {
             className="w-full bg-transparent text-[15px] leading-5 text-fg placeholder:text-fg-3 focus:outline-none"
           />
         </label>
-        <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0" role="group" aria-label="Filter by mood">
+        <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 md:mx-0 md:px-0" role="group" aria-label="Filter by mood">
           <Chip selected={mood === null} onClick={() => setMood(null)}>
             All
           </Chip>

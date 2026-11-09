@@ -27,7 +27,8 @@ function build(env: AppEnv) {
     database: env.DB,
     trustedOrigins: [env.APP_URL],
 
-    session: { expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
+    // Stay signed in. The expiry slides forward each day the app is used; 400 days is the longest a browser keeps a cookie.
+    session: { expiresIn: 60 * 60 * 24 * 400, updateAge: 60 * 60 * 24 },
 
     // Built-in limiter, stored in D1 so it is shared by every Worker instance.
     rateLimit: {
