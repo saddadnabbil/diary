@@ -1,5 +1,5 @@
 import type { Entry } from "./types";
-import type { WireEntry } from "./sync-schema";
+import type { WireEntry, WireEntryInput } from "./sync-schema";
 
 export function toWire(e: Entry): WireEntry {
   return {
@@ -8,6 +8,8 @@ export function toWire(e: Entry): WireEntry {
     body: e.body,
     mood: e.mood,
     promptUsed: e.promptUsed,
+    kind: e.kind ?? "entry",
+    mediaId: e.mediaId ?? null,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
     deletedAt: e.deletedAt,
@@ -19,7 +21,7 @@ export function toWire(e: Entry): WireEntry {
  * Returns the entry to write, or null to leave the local copy alone.
  * Last-write-wins on `updatedAt`; unsynced local edits that are newer are never overwritten.
  */
-export function mergeRemote(local: Entry | undefined, remote: WireEntry): Entry | null {
+export function mergeRemote(local: Entry | undefined, remote: WireEntryInput): Entry | null {
   if (local) {
     if (local.dirty === 1 && local.updatedAt >= remote.updatedAt) return null;
     if (local.dirty === 0 && local.updatedAt >= remote.updatedAt) return null;

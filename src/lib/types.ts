@@ -3,10 +3,18 @@ export type Mood = (typeof MOODS)[number];
 
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "night";
 
+export type EntryKind = "entry" | "story";
+
 export interface Entry {
   id: string;
+  /** Story: the caption. Entry: the title. */
   title: string;
+  /** Entry: rich-text JSON. Stories have no body. */
   body: string;
+  /** "story" is one photo with a short caption. Older entries have no kind and count as "entry". */
+  kind?: EntryKind;
+  /** Story photo: id of the image stored on this device (and uploaded with it). */
+  mediaId?: string | null;
   mood: Mood | null;
   promptUsed: string | null;
   createdAt: number;
@@ -30,6 +38,10 @@ export interface AppSettings {
   personalize: boolean;
   /** Account that owns the data on this device. A different account signing in wipes it. */
   ownerId: string | null;
+  /** Off by default: prompts come from the built-in list until the user turns AI on. */
+  aiEnabled: boolean;
+  /** Name shown on the dashboard. Null uses the first name from the email. */
+  displayName: string | null;
   /** Highest server change number already applied locally. */
   syncCursor: number;
   lastSyncedAt: number | null;

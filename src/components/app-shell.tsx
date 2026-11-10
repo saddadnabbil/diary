@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { adoptUser } from "@/lib/account";
 import { authClient } from "@/lib/auth-client";
 import { signOutFlow } from "@/lib/sign-out";
 import { startSyncRunner } from "@/lib/sync";
-import { CalendarIcon, EntriesIcon, HomeIcon, PlusIcon, SettingsIcon } from "./icons";
+import { CalendarIcon, EntriesIcon, HomeIcon, NextIcon, PlusIcon, SettingsIcon } from "./icons";
 import { cx, LinkButton } from "./ui";
 
 const TABS = [
@@ -34,8 +34,11 @@ export function AppGate({ children }: { children: ReactNode }) {
     if (user) void adoptUser({ id: user.id, email: user.email });
   }, [user]);
 
-  // A guest (no account, local storage, onboarding finished) may use the app without signing in.
-  const guest = !user && !!settings && !settings.ownerId && settings.storageMode === "local" && settings.onboarded;
+  // Local-only guest: no account needed.
+  const guest = !!settings && !settings.ownerId && settings.storageMode === "local" && settings.onboarded;
+  // A device already set up for an account. Shown straight away while the session check runs,
+  // so the dashboard does not wait on the network; a missing session still sends the user to sign in.
+  const setUpForAccount = !!settings && !!settings.ownerId && settings.onboarded;
 
   useEffect(() => {
     if (isPending || !settings) return;
@@ -47,7 +50,11 @@ export function AppGate({ children }: { children: ReactNode }) {
   const syncing = !!user && settings?.storageMode === "cloud" && settings.ownerId === user.id;
   useEffect(() => (syncing ? startSyncRunner() : undefined), [syncing]);
 
-  const ready = user ? !!settings && settings.ownerId === user.id && settings.onboarded : guest;
+  const ready = user
+    ? !!settings && settings.ownerId === user.id && settings.onboarded
+    : isPending
+      ? guest || setUpForAccount
+      : guest;
   if (!ready) return <div className="flex-1" aria-busy="true" />;
   return <>{children}</>;
 }
@@ -56,22 +63,81 @@ export function AppGate({ children }: { children: ReactNode }) {
 const isTabActive = (pathname: string, href: string) =>
   isActive(pathname, href) || (href === "/entries" && pathname.startsWith("/write"));
 
-/** Desktop navigation: a fixed left sidebar. */
+const COLLAPSED_KEY = "diary.sidebar.collapsed";
+const sidebarListeners = new Set<() => void>();
+
+const readCollapsed = (): boolean => {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return false; // storage blocked: stay expanded
+  }
+};
+
+/** Remembered per device. The server render is always expanded, so hydration matches. */
+function useSidebarCollapsed(): [boolean, (v: boolean) => void] {
+  const collapsed = useSyncExternalStore(
+    (fn) => {
+      sidebarListeners.add(fn);
+      return () => sidebarListeners.delete(fn);
+    },
+    readCollapsed,
+    () => false,
+  );
+  const set = (v: boolean) => {
+    try {
+      localStorage.setItem(COLLAPSED_KEY, v ? "1" : "0");
+    } catch {
+      /* not persisted: fine for this visit */
+    }
+    sidebarListeners.forEach((fn) => fn());
+  };
+  return [collapsed, set];
+}
+
+/** Desktop navigation: a left sidebar that can fold down to icons. */
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const settings = useSettings();
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
 
   async function signOut() {
     if (await signOutFlow(settings?.storageMode === "cloud")) router.replace("/welcome");
   }
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col border-r border-line px-5 pb-6 pt-7 md:flex">
-      <Link href="/dashboard" className="display px-1 text-[22px] leading-7 tracking-[-0.015em]">
-        Diary.
-      </Link>
-      <nav aria-label="Main" className="mt-6 flex flex-col gap-1">
+    <aside
+      data-collapsed={collapsed}
+      className={cx(
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line pb-6 pt-7 transition-[width] duration-200 md:flex",
+        collapsed ? "w-[76px] items-center px-3" : "w-[260px] px-5",
+      )}
+    >
+      <div className={cx("flex w-full items-center", collapsed ? "flex-col gap-4" : "justify-between")}>
+        {!collapsed && (
+          <Link href="/dashboard" className="display px-1 text-[22px] leading-7 tracking-[-0.015em]">
+            Diary.
+          </Link>
+        )}
+        {collapsed && (
+          <Link href="/dashboard" aria-label="Diary home" className="display text-[22px] leading-7">
+            D.
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex size-8 items-center justify-center rounded-full text-fg-2 hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+        >
+          <NextIcon size={18} className={cx("transition-transform", collapsed ? "" : "rotate-180")} />
+        </button>
+      </div>
+
+      <nav aria-label="Main" className={cx("mt-6 flex flex-col gap-1", collapsed && "w-full items-center")}>
         {TABS.map(({ href, label, Icon }) => {
           const active = isTabActive(pathname, href);
           return (
@@ -79,39 +145,62 @@ export function Sidebar() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
+              aria-label={collapsed ? label : undefined}
+              title={collapsed ? label : undefined}
               className={cx(
-                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] leading-[22px] transition-colors",
+                "flex items-center rounded-xl text-[15px] leading-[22px] transition-colors",
+                collapsed ? "size-11 justify-center" : "gap-3 px-3.5 py-2.5",
                 active ? "bg-surface font-medium text-fg" : "text-fg-2 hover:bg-surface hover:text-fg",
               )}
             >
               <Icon size={20} />
-              {label}
+              {!collapsed && label}
             </Link>
           );
         })}
       </nav>
-      <LinkButton href="/write" className="mt-auto w-full">
-        New entry
-      </LinkButton>
-      <div className="mt-5 flex flex-col gap-1 px-1">
-        {settings?.email ? (
-          <>
-            <p className="truncate text-[13px] leading-[18px] text-fg-3" title={settings.email}>
-              {settings.email}
-            </p>
-            <button type="button" onClick={signOut} className="w-fit text-[14px] leading-5 text-fg-2 hover:text-fg">
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="text-[13px] leading-[18px] text-fg-3">Saved on this device only.</p>
-            <Link href="/sign-in" className="w-fit text-[14px] leading-5 text-fg-2 hover:text-fg">
-              Sign in to sync
-            </Link>
-          </>
-        )}
-      </div>
+
+      {collapsed ? (
+        <Link
+          href="/write"
+          aria-label="New entry"
+          title="New entry"
+          className="mt-auto flex size-11 items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90"
+        >
+          <PlusIcon size={20} />
+        </Link>
+      ) : (
+        <div className="mt-auto flex w-full flex-col items-stretch gap-2">
+          <LinkButton href="/write" className="w-full">
+            New entry
+          </LinkButton>
+          <Link href="/story/new" className="self-center text-[14px] leading-5 text-fg-2 hover:text-fg">
+            Add a story
+          </Link>
+        </div>
+      )}
+
+      {!collapsed && (
+        <div className="mt-5 flex flex-col gap-1 px-1">
+          {settings?.email ? (
+            <>
+              <p className="truncate text-[13px] leading-[18px] text-fg-3" title={settings.email}>
+                {settings.email}
+              </p>
+              <button type="button" onClick={signOut} className="w-fit text-[14px] leading-5 text-fg-2 hover:text-fg">
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] leading-[18px] text-fg-3">Saved on this device only.</p>
+              <Link href="/sign-in" className="w-fit text-[14px] leading-5 text-fg-2 hover:text-fg">
+                Sign in to sync
+              </Link>
+            </>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

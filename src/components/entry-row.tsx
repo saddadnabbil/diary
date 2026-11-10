@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatShort } from "@/lib/dates";
 import { plainText } from "@/lib/rich";
+import { StoryRow } from "./story-view";
 import type { Entry } from "@/lib/types";
 
 export function entryPreview(e: Entry, max = 160): string {
@@ -9,6 +10,7 @@ export function entryPreview(e: Entry, max = 160): string {
 }
 
 export function EntryRow({ entry }: { entry: Entry }) {
+  if (entry.kind === "story") return <StoryRow entry={entry} />;
   return (
     <Link
       href={`/entries/${entry.id}`}

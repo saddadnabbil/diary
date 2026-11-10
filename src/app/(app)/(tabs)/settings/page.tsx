@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { NextIcon } from "@/components/icons";
 import { Page } from "@/components/page";
 import {
   Button,
@@ -14,6 +13,7 @@ import {
   OptionCard,
   PageTitle,
 } from "@/components/ui";
+import { displayName } from "@/hooks/use-entries";
 import { useDefaultProvider, useSettings } from "@/hooks/use-settings";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -62,6 +62,9 @@ export default function SettingsPage() {
     () => false,
   );
   const [message, setMessage] = useState<string | null>(null);
+  // null until the user types; the field then shows the saved name.
+  const [nameEdit, setNameEdit] = useState<string | null>(null);
+  const nameDraft = nameEdit ?? settings?.displayName ?? "";
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -134,6 +137,34 @@ export default function SettingsPage() {
       <PageTitle>Settings.</PageTitle>
 
       <Section title="Account.">
+        <form
+          className="flex items-center justify-between gap-4 border-b border-line py-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void updateSettings({ displayName: nameDraft.trim().slice(0, 40) || null }).then(() => {
+              setNameEdit(null);
+              setMessage("Name saved.");
+            });
+          }}
+        >
+          <label htmlFor="display-name" className="text-[16px] leading-6">
+            Name
+          </label>
+          <span className="flex min-w-0 items-center gap-2">
+            <input
+              id="display-name"
+              value={nameDraft}
+              onChange={(e) => setNameEdit(e.target.value.slice(0, 40))}
+              placeholder={displayName(settings?.email) ?? "Your name"}
+              autoComplete="given-name"
+              maxLength={40}
+              className="min-w-0 rounded-full border border-line bg-bg px-4 py-2 text-right text-[15px] leading-[22px] placeholder:text-fg-3 focus:border-fg focus:outline-none"
+            />
+            <button type="submit" className="shrink-0 rounded-full px-3 py-2 text-[14px] text-fg-2 hover:text-fg">
+              Save
+            </button>
+          </span>
+        </form>
         <div className="flex items-center justify-between gap-4 border-b border-line py-4">
           <span className="text-[16px] leading-6">Email</span>
           <span className="truncate text-[15px] leading-[22px] text-fg-3">
@@ -200,26 +231,29 @@ export default function SettingsPage() {
         )}
       </Section>
 
-      <Section
-        title="AI suggestions."
-        description="The model that writes your prompts."
-      >
-        <Link
-          href="/settings/ai"
-          className="flex items-center justify-between gap-4 rounded-[20px] border border-line px-5 py-4 transition-colors hover:bg-surface"
-        >
-          <span className="flex flex-col">
-            <span className="text-[16px] leading-6 font-medium">
-              {provider?.label ?? "DeepSeek"}
-            </span>
-            <span className="text-[13px] leading-[18px] text-fg-3">
-              {provider?.model ?? "deepseek-chat"}
-            </span>
-          </span>
-          <span className="flex items-center gap-1 text-[14px] text-fg-2">
-            Manage <NextIcon size={18} />
-          </span>
-        </Link>
+      <Section title="Writing prompts." description="Where your prompts come from. The built-in list needs nothing and sends nothing anywhere.">
+        <div role="radiogroup" aria-label="Prompt source" className="grid gap-3 md:grid-cols-2">
+          <OptionCard
+            selected={!settings?.aiEnabled}
+            title="Built-in list"
+            description="Curated prompts. Nothing leaves this device."
+            onSelect={() => void updateSettings({ aiEnabled: false })}
+          />
+          <OptionCard
+            selected={!!settings?.aiEnabled}
+            title="AI model"
+            description={`Writes prompts with ${provider?.label ?? "DeepSeek"}. Only the mood and time of day are sent.`}
+            onSelect={() => {
+              void updateSettings({ aiEnabled: true });
+              router.push("/settings/ai");
+            }}
+          />
+        </div>
+        {settings?.aiEnabled && (
+          <Link href="/settings/ai" className="mt-4 inline-flex text-[14px] leading-5 text-fg-2 underline underline-offset-4 hover:text-fg">
+            Manage AI model
+          </Link>
+        )}
       </Section>
 
       <Section

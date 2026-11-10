@@ -26,7 +26,7 @@ class SqliteStmt implements Stmt {
 export function createTestDb(): { db: Db; raw: DatabaseSync } {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys = ON");
-  for (const f of ["0001_auth.sql", "0002_app.sql", "0003_images.sql"]) raw.exec(readFileSync(new URL(`../../../../migrations/${f}`, import.meta.url), "utf8"));
+  for (const f of ["0001_auth.sql", "0002_app.sql", "0003_images.sql", "0004_stories.sql"]) raw.exec(readFileSync(new URL(`../../../../migrations/${f}`, import.meta.url), "utf8"));
   const db: Db = {
     prepare: (sql) => new SqliteStmt(raw, sql),
     async batch(statements) {

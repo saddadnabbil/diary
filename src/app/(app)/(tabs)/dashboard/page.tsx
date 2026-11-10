@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const { suggestions, loading, source, refresh } = useSuggestions(null, 1);
   const now = useMemo(() => new Date(), []);
 
-  const name = displayName(settings?.email);
+  const name = settings?.displayName?.trim() || displayName(settings?.email);
   const stats = useMemo(() => {
     const list = entries ?? [];
     const thisMonth = list.filter((e) => {

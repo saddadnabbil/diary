@@ -1,8 +1,9 @@
 "use client";
 
 import { useEditorState, type Editor } from "@tiptap/react";
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { cx } from "../ui";
+import { MusicPicker } from "./music-picker";
 
 function Btn({ label, active, disabled, onClick, children }: { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -29,6 +30,7 @@ const stroke = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stro
 
 export function EditorToolbar({ editor, onFiles }: { editor: Editor | null; onFiles: (files: File[]) => void }) {
   const input = useRef<HTMLInputElement>(null);
+  const [musicOpen, setMusicOpen] = useState(false);
   const s = useEditorState({
     editor,
     selector: ({ editor }) => ({
@@ -42,6 +44,7 @@ export function EditorToolbar({ editor, onFiles }: { editor: Editor | null; onFi
   });
   if (!editor || !s) return <div className="h-9" aria-hidden="true" />;
   const run = () => editor.chain().focus();
+
 
   return (
     <div role="toolbar" aria-label="Formatting" className="flex flex-wrap items-center gap-0.5">
@@ -68,6 +71,9 @@ export function EditorToolbar({ editor, onFiles }: { editor: Editor | null; onFi
       <Btn label="Add image" onClick={() => input.current?.click()}>
         <svg {...stroke}><rect x="3.5" y="4.5" width="17" height="15" rx="3" /><circle cx="9" cy="10" r="1.5" /><path d="m4 17 5-4.500 3.500 3 3-2.500 4.500 4" /></svg>
       </Btn>
+      <Btn label="Add music (Spotify or YouTube)" active={musicOpen} onClick={() => setMusicOpen((v) => !v)}>
+        <svg {...stroke}><path d="M9 18V6l10-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="16.5" cy="16" r="2.5" /></svg>
+      </Btn>
       <input
         ref={input}
         type="file"
@@ -80,6 +86,17 @@ export function EditorToolbar({ editor, onFiles }: { editor: Editor | null; onFi
           if (files.length) onFiles(files);
         }}
       />
+      {musicOpen && (
+        <div className="w-full">
+          <MusicPicker
+            onPick={(uri) => {
+              editor.chain().focus().insertContent({ type: "music", attrs: { uri } }).run();
+              setMusicOpen(false);
+            }}
+            onClose={() => setMusicOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

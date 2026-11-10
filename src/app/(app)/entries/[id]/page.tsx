@@ -10,6 +10,7 @@ import { Button, LinkButton } from "@/components/ui";
 import { BackToTop } from "@/components/back-to-top";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { AnnotatableView } from "@/components/rich/annotatable-view";
+import { StoryDetail } from "@/components/story-view";
 import { useEntry } from "@/hooks/use-entries";
 import { deleteEntry, saveEntry } from "@/lib/db";
 import { formatLong, formatTime, wordCount } from "@/lib/dates";
@@ -35,6 +36,14 @@ export default function EntryDetailPage({ params }: PageProps<"/entries/[id]">) 
         <LinkButton href="/entries" className="mt-6">
           Back to entries
         </LinkButton>
+      </Page>
+    );
+  }
+
+  if (entry.kind === "story") {
+    return (
+      <Page>
+        <StoryDetail entry={entry} />
       </Page>
     );
   }

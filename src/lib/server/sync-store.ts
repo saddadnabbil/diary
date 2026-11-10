@@ -1,4 +1,4 @@
-import { MAX_ENTRIES_PER_USER, type SyncResponse, type WireEntry } from "../sync-schema";
+import { MAX_ENTRIES_PER_USER, type SyncResponse, type WireEntry, type WireEntryInput } from "../sync-schema";
 import type { Db } from "./db";
 
 /** Allow modest clock skew; anything further in the future is clamped so it cannot win last-write-wins forever. */
@@ -12,6 +12,8 @@ interface Row {
   body: string;
   mood: WireEntry["mood"];
   prompt_used: string | null;
+  kind: WireEntry["kind"];
+  media_id: string | null;
   created_at: number;
   updated_at: number;
   deleted_at: number | null;
@@ -23,7 +25,7 @@ interface Row {
  * A change older than (or equal to) what the server holds is ignored.
  * Deleted entries keep a tombstone but lose their content.
  */
-export async function applyChanges(db: Db, userId: string, changes: WireEntry[], nowMs: number = Date.now()): Promise<void> {
+export async function applyChanges(db: Db, userId: string, changes: WireEntryInput[], nowMs: number = Date.now()): Promise<void> {
   if (changes.length === 0) return;
 
   const countRow = await db.prepare("SELECT COUNT(*) AS n FROM entries WHERE user_id = ?1").bind(userId).first<{ n: number }>();
@@ -32,8 +34,8 @@ export async function applyChanges(db: Db, userId: string, changes: WireEntry[],
 
   const ceiling = nowMs + MAX_SKEW_MS;
   const upsert = `
-    INSERT INTO entries (user_id, id, title, body, mood, prompt_used, created_at, updated_at, deleted_at, server_seq)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
+    INSERT INTO entries (user_id, id, title, body, mood, prompt_used, created_at, updated_at, deleted_at, kind, media_id, server_seq)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
       (SELECT COALESCE(MAX(server_seq), 0) + 1 FROM entries WHERE user_id = ?1))
     ON CONFLICT(user_id, id) DO UPDATE SET
       title = excluded.title,
@@ -43,6 +45,8 @@ export async function applyChanges(db: Db, userId: string, changes: WireEntry[],
       created_at = excluded.created_at,
       updated_at = excluded.updated_at,
       deleted_at = excluded.deleted_at,
+      kind = excluded.kind,
+      media_id = excluded.media_id,
       server_seq = excluded.server_seq
     WHERE excluded.updated_at > entries.updated_at`;
 
@@ -60,6 +64,8 @@ export async function applyChanges(db: Db, userId: string, changes: WireEntry[],
         Math.min(c.createdAt, ceiling),
         Math.min(c.updatedAt, ceiling),
         c.deletedAt === null ? null : Math.min(c.deletedAt, ceiling),
+        deleted ? "entry" : (c.kind ?? "entry"),
+        deleted ? null : (c.mediaId ?? null),
       );
   });
   await db.batch(statements);
@@ -69,7 +75,7 @@ export async function applyChanges(db: Db, userId: string, changes: WireEntry[],
 export async function pullChanges(db: Db, userId: string, since: number, limit: number): Promise<SyncResponse> {
   const { results } = await db
     .prepare(
-      `SELECT id, title, body, mood, prompt_used, created_at, updated_at, deleted_at, server_seq
+      `SELECT id, title, body, mood, prompt_used, kind, media_id, created_at, updated_at, deleted_at, server_seq
        FROM entries WHERE user_id = ?1 AND server_seq > ?2 ORDER BY server_seq ASC LIMIT ?3`,
     )
     .bind(userId, since, limit + 1)
@@ -84,6 +90,8 @@ export async function pullChanges(db: Db, userId: string, since: number, limit: 
       body: r.body,
       mood: r.mood,
       promptUsed: r.prompt_used,
+      kind: r.kind,
+      mediaId: r.media_id,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       deletedAt: r.deleted_at,

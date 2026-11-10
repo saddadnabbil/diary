@@ -14,11 +14,17 @@ export const WireEntry = z.object({
   body: z.string().max(MAX_BODY_CHARS),
   mood: z.enum(MOODS).nullable(),
   promptUsed: z.string().max(300).nullable(),
+  // Older clients send neither field; they default to a plain entry with no photo.
+  kind: z.enum(["entry", "story"]).default("entry"),
+  mediaId: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).nullable().default(null),
   createdAt: z.number().int().min(0).max(8.64e15),
   updatedAt: z.number().int().min(0).max(8.64e15),
   deletedAt: z.number().int().min(0).max(8.64e15).nullable(),
 });
+/** What the server returns (defaults applied). */
 export type WireEntry = z.infer<typeof WireEntry>;
+/** What a client may send: kind and mediaId can be left out by older clients. */
+export type WireEntryInput = z.input<typeof WireEntry>;
 
 export const SyncRequest = z.object({
   /** Last server_seq the client has seen. */

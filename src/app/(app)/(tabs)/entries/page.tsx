@@ -48,7 +48,12 @@ export default function EntriesPage() {
 
   return (
     <Page>
-      <PageTitle sub={total ? `${total} ${total === 1 ? "entry" : "entries"} so far.` : undefined}>Your entries.</PageTitle>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <PageTitle sub={total ? `${total} ${total === 1 ? "entry" : "entries"} so far.` : undefined}>Your entries.</PageTitle>
+        <LinkButton href="/story/new" variant="secondary" className="mb-1">
+          Add a story
+        </LinkButton>
+      </div>
 
       <div className="mt-6 flex flex-col gap-4 md:mt-10">
         <label className="flex items-center gap-2.5 rounded-full border border-line bg-bg px-4 py-2.5 text-fg-3 focus-within:border-fg md:max-w-sm">

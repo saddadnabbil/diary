@@ -51,6 +51,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultProviderId: DEFAULT_PROVIDER_ID,
   personalize: false,
   ownerId: null,
+  aiEnabled: false,
+  displayName: null,
   syncCursor: 0,
   lastSyncedAt: null,
 };
@@ -127,6 +129,8 @@ export async function createEntry(init: Partial<Entry> = {}): Promise<Entry> {
     id: newId(),
     title: "",
     body: "",
+    kind: "entry",
+    mediaId: null,
     mood: null,
     promptUsed: null,
     createdAt: now,
@@ -140,7 +144,7 @@ export async function createEntry(init: Partial<Entry> = {}): Promise<Entry> {
   return entry;
 }
 
-export async function saveEntry(id: string, patch: Partial<Pick<Entry, "title" | "body" | "mood" | "promptUsed" | "createdAt">>): Promise<void> {
+export async function saveEntry(id: string, patch: Partial<Pick<Entry, "title" | "body" | "mood" | "promptUsed" | "createdAt" | "mediaId">>): Promise<void> {
   await db.entries.update(id, { ...patch, updatedAt: Date.now(), dirty: 1 });
   notifyLocalChange();
 }
@@ -179,6 +183,8 @@ export async function importEntries(json: string): Promise<number> {
       promptUsed: typeof e.promptUsed === "string" ? e.promptUsed.slice(0, 300) : null,
       createdAt: Math.trunc(e.createdAt),
       updatedAt: typeof e.updatedAt === "number" && Number.isFinite(e.updatedAt) ? Math.trunc(e.updatedAt) : Math.trunc(e.createdAt),
+      kind: e.kind === "story" ? "story" : "entry",
+      mediaId: typeof e.mediaId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(e.mediaId) ? e.mediaId : null,
       deletedAt: null,
       dirty: 1,
     });

@@ -11,6 +11,8 @@ const csp = [
   "img-src 'self' data: blob:",
   "font-src 'self'",
   `connect-src 'self'${isProd ? "" : " ws: wss:"}`,
+  // Music embeds in entries: Spotify and YouTube (privacy-enhanced domain). Nothing else.
+  "frame-src https://open.spotify.com https://www.youtube-nocookie.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

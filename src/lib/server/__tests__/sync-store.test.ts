@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { WireEntry } from "../../sync-schema";
+import type { WireEntryInput } from "../../sync-schema";
 import type { Db } from "../db";
 import { applyChanges, deleteAccountData, pullChanges, QuotaError } from "../sync-store";
 import { addUser, createTestDb } from "./sqlite-d1";
@@ -7,7 +7,7 @@ import { addUser, createTestDb } from "./sqlite-d1";
 let db: Db;
 let raw: ReturnType<typeof createTestDb>["raw"];
 
-const entry = (over: Partial<WireEntry> = {}): WireEntry => ({
+const entry = (over: Partial<WireEntryInput> = {}): WireEntryInput => ({
   id: "entry-0001",
   title: "A slow morning",
   body: "Woke up early.",

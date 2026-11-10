@@ -13,8 +13,9 @@ export default function WelcomePage() {
   async function startGuest() {
     await ensureSeed(); // the settings row must exist before it can be updated
     if (await isGuest()) return router.push("/dashboard");
-    await updateSettings({ storageMode: "local", onboarded: false });
-    router.push("/onboarding/storage");
+    // Local start needs nothing else: no account, no setup steps, no AI (built-in prompts only).
+    await updateSettings({ storageMode: "local", onboarded: true, aiEnabled: false });
+    router.push("/dashboard");
   }
 
   return (

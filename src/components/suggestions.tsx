@@ -44,12 +44,14 @@ export function SuggestionSkeleton() {
   );
 }
 
+/** Shows where the prompt came from. Green with the model name only when the model actually wrote it. */
 export function ModelBadge({ source }: { source: SuggestionSource | null }) {
   const provider = useDefaultProvider();
-  const label = source === "fallback" ? "Built-in" : (provider?.label ?? "DeepSeek");
+  const fromModel = source === "ai";
+  const label = fromModel ? (provider?.label ?? "AI model") : "Built-in";
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1 text-[12px] leading-4 text-fg-2">
-      <span className={cx("size-1.5 rounded-full", source === "fallback" ? "bg-fg-3" : "bg-success")} aria-hidden="true" />
+      <span className={cx("size-1.5 rounded-full", fromModel ? "bg-success" : "bg-fg-3")} aria-hidden="true" />
       {label}
     </span>
   );

@@ -11,18 +11,19 @@ export default function StoragePage() {
   const settings = useSettings();
   const mode = settings?.storageMode ?? "cloud";
 
-  // Cloud needs an account, so sign in first. Local works without one.
-  async function next() {
+
+  // Finishing setup here: prompts stay on the built-in list until AI is turned on in Settings.
+  async function finish() {
     if (mode === "cloud") {
       const { data } = await authClient.getSession();
       if (!data) return router.push("/sign-in?new=1");
     }
-    router.push("/onboarding/ai");
+    await updateSettings({ onboarded: true, aiEnabled: false });
+    router.push("/dashboard");
   }
 
   return (
     <>
-      <p className="text-[14px] leading-5 text-fg-3">Step 1 of 2</p>
       <h1 className="display mt-4 text-[28px] leading-8">Where should your diary live?</h1>
       <p className="mt-3 text-[17px] leading-[26px] text-fg-2">You can change this later in Settings.</p>
 
@@ -43,8 +44,8 @@ export default function StoragePage() {
       </div>
 
       <div className="mt-auto pt-10 md:mt-0 md:pt-8">
-        <Button className="w-full" onClick={next} disabled={!settings}>
-          Continue
+        <Button className="w-full" onClick={finish} disabled={!settings}>
+          {mode === "cloud" ? "Continue" : "Start writing"}
         </Button>
       </div>
     </>

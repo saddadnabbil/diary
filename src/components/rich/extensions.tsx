@@ -2,17 +2,19 @@
 
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Mark, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
+import { Mark, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect } from "react";
 import { db } from "@/lib/db";
+import { embedHeight, embedUrl, parseStoredMusicUri, providerName, type MusicRef } from "@/lib/music";
 import { fetchRemoteImage } from "@/lib/sync";
 
 // Object URLs are cached per image for the life of the page: cheap, and safe under React strict mode.
 const urlCache = new Map<string, string>();
 
-function useImageUrl(imageId: string | null): string | null | undefined {
+/** Object URL for an image stored on this device. undefined while loading, null when not on this device. */
+export function useImageUrl(imageId: string | null): string | null | undefined {
   const stored = useLiveQuery(async () => (imageId ? ((await db.images.get(imageId)) ?? null) : null), [imageId]);
   if (stored === undefined) return undefined;
   if (stored === null) return null;
@@ -65,6 +67,57 @@ export const DiaryImage = Image.extend({
   },
 });
 
+/** A music embed (Spotify or YouTube). The iframe URL is built from the validated id only. */
+function MusicView({ node }: NodeViewProps) {
+  const ref: MusicRef | null = parseStoredMusicUri(node.attrs.uri);
+  return (
+    <NodeViewWrapper className="my-4">
+      {ref ? (
+        <div className="overflow-hidden rounded-[24px]">
+          <iframe
+            title={`${providerName(ref.provider)} ${ref.kind}`}
+            src={embedUrl(ref)}
+            width="100%"
+            height={embedHeight(ref)}
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="block border-0"
+          />
+        </div>
+      ) : (
+        <p className="rounded-[14px] border border-line px-4 py-3 text-[13px] text-fg-3">This music link is not supported.</p>
+      )}
+    </NodeViewWrapper>
+  );
+}
+
+const musicNode = (name: string) =>
+  Node.create({
+    name,
+    group: "block",
+    atom: true,
+    selectable: true,
+    draggable: false,
+    addAttributes() {
+      return { uri: { default: null } };
+    },
+    parseHTML() {
+      return [{ tag: `div[data-music]`, getAttrs: (el) => ({ uri: (el as HTMLElement).getAttribute("data-uri") }) }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ["div", { "data-music": "", "data-uri": HTMLAttributes.uri }];
+    },
+    addNodeView() {
+      return ReactNodeViewRenderer(MusicView);
+    },
+  });
+
+/** A song, album, playlist or video from Spotify or YouTube. Stored as a URI only. */
+export const MusicEmbed = musicNode("music");
+/** Entries written before YouTube support used this name. Same view, so they keep loading. */
+export const LegacySpotifyEmbed = musicNode("spotify");
+
 export const HIGHLIGHT_COLORS = ["yellow", "green", "pink"] as const;
 export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
 
@@ -99,6 +152,8 @@ export const baseExtensions = [
     underline: false,
   }),
   DiaryImage,
+  MusicEmbed,
+  LegacySpotifyEmbed,
   Highlight,
 ];
 
