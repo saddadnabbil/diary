@@ -21,6 +21,7 @@ export default function NewStoryPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [editing, setEditing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Free the preview URL when it is replaced or the page closes.
@@ -158,11 +159,15 @@ export default function NewStoryPage() {
         placeholder="Add a caption"
         maxLength={STORY_CAPTION_MAX}
         rows={2}
+        onFocus={() => setEditing(true)}
+        onBlur={() => setEditing(false)}
         className="mx-auto mt-6 block w-full max-w-[320px] resize-none bg-transparent text-center text-[17px] leading-6 break-words placeholder:text-fg-3 focus:outline-none"
       />
-      <p className="mt-1 text-center text-[12px] leading-4 text-fg-3">
-        {caption.length}/{STORY_CAPTION_MAX}
-      </p>
+      {editing && (
+        <p className="mt-1 text-center text-[12px] leading-4 text-fg-3" aria-live="polite">
+          {caption.length}/{STORY_CAPTION_MAX}
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="mt-6 text-center text-[13px] leading-[18px] text-fg">

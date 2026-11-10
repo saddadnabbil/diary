@@ -50,6 +50,7 @@ export function StoryDetail({ entry }: { entry: Entry }) {
   const router = useRouter();
   const [caption, setCaption] = useState(entry.title);
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -98,11 +99,15 @@ export function StoryDetail({ entry }: { entry: Entry }) {
         placeholder="Add a caption"
         maxLength={STORY_CAPTION_MAX}
         rows={2}
+        onFocus={() => setEditing(true)}
+        onBlur={() => setEditing(false)}
         className="mx-auto mt-5 block w-full max-w-[480px] resize-none bg-transparent text-center text-[17px] leading-6 break-words placeholder:text-fg-3 focus:outline-none"
       />
-      <p className="mt-1 text-center text-[12px] leading-4 text-fg-3">
-        {caption.length}/{STORY_CAPTION_MAX}
-      </p>
+      {editing && (
+        <p className="mt-1 text-center text-[12px] leading-4 text-fg-3" aria-live="polite">
+          {caption.length}/{STORY_CAPTION_MAX}
+        </p>
+      )}
 
       <div className="mt-8 flex justify-center">
         <LinkButton href="/dashboard" variant="secondary">
