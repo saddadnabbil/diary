@@ -151,14 +151,14 @@ export default function NewStoryPage() {
       <label className="sr-only" htmlFor="story-caption">
         Caption
       </label>
-      <input
+      <textarea
         id="story-caption"
         value={caption}
         onChange={(e) => onCaption(e.target.value)}
         placeholder="Add a caption"
         maxLength={STORY_CAPTION_MAX}
-        autoComplete="off"
-        className="mx-auto mt-6 block w-full max-w-[320px] bg-transparent text-center text-[17px] leading-6 placeholder:text-fg-3 focus:outline-none"
+        rows={2}
+        className="mx-auto mt-6 block w-full max-w-[320px] resize-none bg-transparent text-center text-[17px] leading-6 break-words placeholder:text-fg-3 focus:outline-none"
       />
       <p className="mt-1 text-center text-[12px] leading-4 text-fg-3">
         {caption.length}/{STORY_CAPTION_MAX}

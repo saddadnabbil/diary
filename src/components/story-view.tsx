@@ -91,14 +91,14 @@ export function StoryDetail({ entry }: { entry: Entry }) {
       <label className="sr-only" htmlFor="caption">
         Caption
       </label>
-      <input
+      <textarea
         id="caption"
         value={caption}
         onChange={(e) => setCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
         placeholder="Add a caption"
         maxLength={STORY_CAPTION_MAX}
-        autoComplete="off"
-        className="mx-auto mt-5 block w-full max-w-[480px] bg-transparent text-center text-[17px] leading-6 placeholder:text-fg-3 focus:outline-none"
+        rows={2}
+        className="mx-auto mt-5 block w-full max-w-[480px] resize-none bg-transparent text-center text-[17px] leading-6 break-words placeholder:text-fg-3 focus:outline-none"
       />
       <p className="mt-1 text-center text-[12px] leading-4 text-fg-3">
         {caption.length}/{STORY_CAPTION_MAX}
