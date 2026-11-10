@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { EntryRow } from "@/components/entry-row";
 import { Page } from "@/components/page";
-import { ModelBadge, ShuffleButton, SuggestionSkeleton } from "@/components/suggestions";
+import { ModelBadge, SuggestionSkeleton } from "@/components/suggestions";
+import { NextIcon, RefreshIcon } from "@/components/icons";
 import { LinkButton } from "@/components/ui";
 import { displayName, useEntries } from "@/hooks/use-entries";
 import { useSettings } from "@/hooks/use-settings";
@@ -42,6 +43,17 @@ export default function DashboardPage() {
         <Stat value={stats.thisMonth} label={stats.thisMonth === 1 ? "entry this month" : "entries this month"} />
       </section>
 
+      <Link
+        href="/story/new"
+        className="mt-3 flex items-center justify-between rounded-[20px] border border-line px-5 py-4 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+      >
+        <span className="flex flex-col">
+          <span className="text-[16px] leading-6 font-medium">Add a story</span>
+          <span className="text-[13px] leading-[18px] text-fg-3">One photo and a short caption</span>
+        </span>
+        <NextIcon size={18} />
+      </Link>
+
       <section aria-labelledby="prompt-h" className="mt-7">
         <div className="flex items-center justify-between">
           <h2 id="prompt-h" className="text-[14px] leading-5 font-medium">
@@ -58,7 +70,16 @@ export default function DashboardPage() {
               <p className="display mt-2 text-[22px] leading-[30px] tracking-[-0.02em] md:text-[26px] md:leading-9">{prompt.text}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <LinkButton href={`/write?prompt=${encodeURIComponent(prompt.text)}`}>Write about this</LinkButton>
-                <ShuffleButton onClick={refresh} loading={loading} />
+                <button
+                  type="button"
+                  onClick={refresh}
+                  disabled={loading}
+                  aria-label="Shuffle prompt"
+                  title="Shuffle prompt"
+                  className="flex size-[42px] items-center justify-center rounded-full border border-line bg-bg text-fg-2 transition-colors hover:bg-surface-hover hover:text-fg disabled:opacity-50"
+                >
+                  <RefreshIcon size={18} className={loading ? "animate-spin" : undefined} />
+                </button>
               </div>
             </>
           ) : null}

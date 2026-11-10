@@ -15,7 +15,7 @@ import { DatePicker } from "./date-picker";
 import { editorExtensions } from "./rich/extensions";
 import { EditorToolbar } from "./rich/toolbar";
 import { ModelBadge, ShuffleButton, SourceNote, SuggestionCard, SuggestionSkeleton } from "./suggestions";
-import { Button, Chip } from "./ui";
+import { Button, Chip, LinkButton } from "./ui";
 
 /** Loads the entry (when editing) and mounts the form once it is ready. */
 export function Editor({ id, initialPrompt, initialDate }: { id?: string; initialPrompt?: string; initialDate?: number }) {
@@ -156,9 +156,15 @@ function EditorForm({ entry, initialPrompt, initialDate }: { entry?: Entry; init
                 touch();
               }}
             />
-            <Button variant="primary" onClick={done} className="!py-2">
-              Done
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Switch to a story. Anything already written here is kept as an entry. */}
+              <LinkButton href="/story/new" variant="secondary" className="!py-2" onClick={() => void flush()}>
+                Add a story
+              </LinkButton>
+              <Button variant="primary" onClick={done} className="!py-2">
+                Done
+              </Button>
+            </div>
           </div>
           <div className="-ml-2 mt-1">
             <EditorToolbar editor={editor} onFiles={(f) => void insertFiles(f)} />
