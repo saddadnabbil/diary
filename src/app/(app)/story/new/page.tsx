@@ -9,6 +9,7 @@ import { STORY_CAPTION_MAX } from "@/components/story-view";
 import { Button, cx } from "@/components/ui";
 import { createEntry, saveEntry } from "@/lib/db";
 import { ImageError, storeImage } from "@/lib/images";
+import { WebcamCapture } from "@/components/webcam-capture";
 
 /** A story: one photo with a short caption. No body text. The entry is created once the photo is in. */
 export default function NewStoryPage() {
@@ -22,6 +23,15 @@ export default function NewStoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [webcam, setWebcam] = useState(false);
+
+  // Phones open the native camera through the file input. Desktop gets a live webcam preview,
+  // because a file input with capture only opens the file picker there.
+  function takePhoto() {
+    const desktop = !window.matchMedia("(pointer: coarse)").matches;
+    if (desktop && typeof navigator.mediaDevices?.getUserMedia === "function") setWebcam(true);
+    else camera.current?.click();
+  }
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Free the preview URL when it is replaced or the page closes.
@@ -102,11 +112,19 @@ export default function NewStoryPage() {
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="" className="size-full object-cover" />
+        ) : webcam ? (
+          <WebcamCapture
+            onCapture={(file) => {
+              setWebcam(false);
+              void pick(file);
+            }}
+            onCancel={() => setWebcam(false)}
+          />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-3 px-6 text-center text-[15px] text-fg-2">
             <button
               type="button"
-              onClick={() => camera.current?.click()}
+              onClick={takePhoto}
               disabled={busy}
               className="w-full max-w-[220px] rounded-full bg-primary px-5 py-2.5 text-[14px] font-medium text-on-primary disabled:opacity-60"
             >
