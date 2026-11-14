@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { EntryRow } from "@/components/entry-row";
+import { EntryList } from "@/components/entry-row";
 import { Page } from "@/components/page";
 import { ModelBadge, SuggestionSkeleton } from "@/components/suggestions";
 import { NextIcon, RefreshIcon } from "@/components/icons";
@@ -102,7 +102,7 @@ export default function DashboardPage() {
             Nothing here yet. Your first entry is one prompt away.
           </p>
         ) : (
-          <div className="mt-1">{entries?.slice(0, 3).map((e) => <EntryRow key={e.id} entry={e} />)}</div>
+          <div className="mt-1">{entries && <EntryList entries={entries.slice(0, 3)} />}</div>
         )}
       </section>
     </Page>

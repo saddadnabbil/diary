@@ -1,120 +1,142 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { BackIcon } from "@/components/icons";
-import { useImageUrl } from "@/components/rich/extensions";
-import { Button, LinkButton } from "@/components/ui";
+import { MediaStrip } from "@/components/media-strip";
+import { PhotoViewer, type Slide } from "@/components/photo-viewer";
+import { useEntries } from "@/hooks/use-entries";
 import { deleteEntry, saveEntry } from "@/lib/db";
-import { formatLong, formatTime } from "@/lib/dates";
-import { fetchRemoteImage } from "@/lib/sync";
+import { dayKey, formatLong, formatTime } from "@/lib/dates";
 import type { Entry } from "@/lib/types";
 
 export const STORY_CAPTION_MAX = 120;
 
-/** The photo of a story. Fetched from the cloud when this device does not have it yet. */
-export function StoryImage({ mediaId, className }: { mediaId: string | null; className?: string }) {
-  const url = useImageUrl(mediaId);
-  useEffect(() => {
-    if (url === null && mediaId) void fetchRemoteImage(mediaId);
-  }, [url, mediaId]);
-  if (url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt="" className={className} />;
-  }
-  return <div className={`flex items-center justify-center bg-surface text-[13px] text-fg-3 ${className ?? ""}`}>{url === undefined ? "Loading…" : "Loading from cloud…"}</div>;
-}
+/* Set when a story is opened from inside the app, so closing can go back to where it was. */
+let openedFromApp = false;
 
-/** Story row in the entries list: small square photo and the caption. */
-export function StoryRow({ entry }: { entry: Entry }) {
+/** Stories of one day in the entries list: their photos in one row, each opens the full-screen viewer. */
+export function StoryGroup({ stories: newestFirst }: { stories: Entry[] }) {
+  const router = useRouter();
+  // Like Instagram: a day's stories play from the earliest.
+  const stories = [...newestFirst].reverse();
+  const first = stories[0];
   return (
-    <Link
-      href={`/entries/${entry.id}`}
-      className="group flex items-center gap-4 border-b border-line py-4 md:gap-6 md:py-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
-    >
-      <StoryImage mediaId={entry.mediaId ?? null} className="size-16 shrink-0 rounded-[12px] border border-line object-cover md:size-20" />
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-[13px] leading-[18px] text-fg-3">Story · {formatLong(entry.createdAt)}</span>
-        <span className="truncate text-[17px] leading-6 font-medium tracking-[-0.01em] group-hover:underline underline-offset-4 decoration-line md:text-[18px]">
-          {entry.title.trim() || "No caption"}
-        </span>
-      </span>
-    </Link>
+    <div className="border-b border-line py-4 md:py-5">
+      <p className="text-[13px] leading-[18px] text-fg-3">
+        {stories.length === 1 ? "Story" : `${stories.length} stories`} · {formatLong(first.createdAt)}
+      </p>
+      <MediaStrip
+        className="mt-3"
+        maxHeight={340}
+        items={stories.map((s) => ({ mediaId: s.mediaId ?? null, label: s.title.trim() || undefined }))}
+        onOpen={(i) => {
+          openedFromApp = true;
+          router.push(`/entries/${stories[i].id}`);
+        }}
+      />
+    </div>
   );
 }
 
-/** Full view of a story: the photo, a small editable caption, delete. */
-export function StoryDetail({ entry }: { entry: Entry }) {
-  const router = useRouter();
-  const [caption, setCaption] = useState(entry.title);
-  const [confirming, setConfirming] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+/** Days newest first (like the entries list), and within a day the earliest story first (like Instagram). */
+function storyOrder(newestFirst: Entry[]): Entry[] {
+  const days: Entry[][] = [];
+  for (const s of newestFirst) {
+    const last = days[days.length - 1];
+    if (last && dayKey(new Date(last[0].createdAt)) === dayKey(new Date(s.createdAt))) last.push(s);
+    else days.push([s]);
+  }
+  return days.flatMap((d) => d.reverse());
+}
 
-  // Caption edits are saved shortly after typing stops.
-  useEffect(() => {
-    if (caption === entry.title) return;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => void saveEntry(entry.id, { title: caption }), 500);
-    return () => clearTimeout(timer.current);
-  }, [caption, entry.id, entry.title]);
+/**
+ * Every story, full screen, starting at the one that was tapped. Stories of the same day share
+ * the progress bar and play from the earliest; after a day's last story comes the day before.
+ */
+export function StoryViewer({ startId }: { startId: string }) {
+  const router = useRouter();
+  const entries = useEntries();
+  const stories = useMemo(() => storyOrder((entries ?? []).filter((e) => e.kind === "story")), [entries]);
+  const [current, setCurrent] = useState(startId);
+  const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const index = Math.max(0, stories.findIndex((s) => s.id === current));
+  const slides: Slide[] = useMemo(() => stories.map((s) => ({ id: s.id, mediaId: s.mediaId ?? null, group: dayKey(new Date(s.createdAt)) })), [stories]);
+
+  const onIndex = useCallback(
+    (i: number) => {
+      const s = stories[i];
+      if (!s) return;
+      setCurrent(s.id);
+      setEditing(false);
+      // Keep the address on the story being shown, without a navigation.
+      window.history.replaceState(window.history.state, "", `/entries/${s.id}`);
+    },
+    [stories],
+  );
+
+  const close = useCallback(() => {
+    if (openedFromApp) {
+      openedFromApp = false;
+      router.back();
+    } else router.replace("/entries");
+  }, [router]);
 
   async function remove() {
+    const s = stories[index];
+    if (!s) return;
     setDeleting(true);
-    await deleteEntry(entry.id);
-    router.replace("/entries");
+    const next = stories[index + 1] ?? stories[index - 1];
+    // Move to the neighbour first: the list shrinks by one, so the scroll position already shows it.
+    if (next) {
+      setCurrent(next.id);
+      window.history.replaceState(window.history.state, "", `/entries/${next.id}`);
+    }
+    await deleteEntry(s.id);
+    setDeleting(false);
+    setConfirming(false);
+    if (!next) close();
   }
+
+  if (!entries) return <div className="fixed inset-0 z-40 bg-black" aria-busy="true" />;
+  if (!stories.length) return null;
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <Link href="/entries" aria-label="Back to entries" className="-ml-1 rounded-full p-1 text-fg hover:bg-surface-hover">
-          <BackIcon />
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setConfirming(true)}>
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <p className="mt-8 text-[13px] leading-[18px] text-fg-3 md:text-[14px] md:leading-5">
-        Story · {formatLong(entry.createdAt)} · {formatTime(entry.createdAt)}
-      </p>
-
-      <div className="mt-5 flex justify-center">
-        <StoryImage mediaId={entry.mediaId ?? null} className="max-h-[70vh] w-full max-w-[480px] rounded-[20px] border border-line object-contain" />
-      </div>
-
-      <label className="sr-only" htmlFor="caption">
-        Caption
-      </label>
-      <textarea
-        id="caption"
-        value={caption}
-        onChange={(e) => setCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
-        placeholder="Add a caption"
-        maxLength={STORY_CAPTION_MAX}
-        rows={2}
-        onFocus={() => setEditing(true)}
-        onBlur={() => setEditing(false)}
-        className="mx-auto mt-5 block w-full max-w-[480px] resize-none bg-transparent text-center text-[17px] leading-6 break-words placeholder:text-fg-3 focus:outline-none"
+      <PhotoViewer
+        label="Stories"
+        slides={slides}
+        index={index}
+        onIndex={onIndex}
+        onClose={close}
+        autoAdvance
+        card
+        paused={editing || confirming}
+        header={(_, i) => {
+          const s = stories[i];
+          return (
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-[13px] leading-[18px] font-medium text-white/90">
+                {formatLong(s.createdAt)} <span className="text-white/60">· {formatTime(s.createdAt)}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                aria-label="Delete this story"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/15"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" />
+                </svg>
+              </button>
+            </div>
+          );
+        }}
+        footer={(_, i) => <Caption key={stories[i].id} entry={stories[i]} editing={editing} setEditing={setEditing} />}
       />
-      {editing && (
-        <p className="mt-1 text-center text-[12px] leading-4 text-fg-3" aria-live="polite">
-          {caption.length}/{STORY_CAPTION_MAX}
-        </p>
-      )}
-
-      <div className="mt-8 flex justify-center">
-        <LinkButton href="/dashboard" variant="secondary">
-          Done
-        </LinkButton>
-      </div>
-
       <ConfirmDialog
         open={confirming}
         title="Delete this story?"
@@ -125,5 +147,57 @@ export function StoryDetail({ entry }: { entry: Entry }) {
         onCancel={() => setConfirming(false)}
       />
     </>
+  );
+}
+
+/** The caption over the bottom of the photo. Tap to edit; saved shortly after typing stops. */
+function Caption({ entry, editing, setEditing }: { entry: Entry; editing: boolean; setEditing: (v: boolean) => void }) {
+  const [caption, setCaption] = useState(entry.title);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    if (caption === entry.title) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => void saveEntry(entry.id, { title: caption }), 500);
+    return () => clearTimeout(timer.current);
+  }, [caption, entry.id, entry.title]);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="block w-full text-left text-[16px] leading-[22px] break-words text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]"
+      >
+        {caption.trim() || <span className="text-white/60">Add a caption</span>}
+      </button>
+    );
+  }
+  return (
+    <div>
+      <label className="sr-only" htmlFor="story-caption-edit">
+        Caption
+      </label>
+      <textarea
+        id="story-caption-edit"
+        autoFocus
+        value={caption}
+        onChange={(e) => setCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        placeholder="Add a caption"
+        maxLength={STORY_CAPTION_MAX}
+        rows={2}
+        className="block w-full resize-none rounded-xl bg-black/35 px-3 py-2 text-[16px] leading-[22px] text-white placeholder:text-white/60 focus:outline-none"
+      />
+      <p className="mt-1 text-right text-[12px] leading-4 text-white/70" aria-live="polite">
+        {caption.length}/{STORY_CAPTION_MAX}
+      </p>
+    </div>
   );
 }

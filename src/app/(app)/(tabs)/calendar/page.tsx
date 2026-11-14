@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EntryRow } from "@/components/entry-row";
+import { EntryList } from "@/components/entry-row";
 import { BackIcon, NextIcon } from "@/components/icons";
 import { Page } from "@/components/page";
 import { cx, LinkButton } from "@/components/ui";
@@ -112,9 +112,7 @@ export default function CalendarPage() {
           </div>
         ) : (
           <div className="mt-1">
-            {dayEntries.map((e) => (
-              <EntryRow key={e.id} entry={e} />
-            ))}
+            <EntryList entries={dayEntries} />
           </div>
         )}
       </section>

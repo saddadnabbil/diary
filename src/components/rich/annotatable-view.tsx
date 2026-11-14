@@ -2,9 +2,10 @@
 
 import { EditorContent, getMarkRange, useEditor, type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseBody } from "@/lib/rich";
+import { PhotoViewer } from "@/components/photo-viewer";
+import { imageIds, parseBody } from "@/lib/rich";
 import { cx } from "../ui";
-import { baseExtensions, HIGHLIGHT_COLORS, type HighlightColor } from "./extensions";
+import { baseExtensions, HIGHLIGHT_COLORS, OpenPhotoContext, type HighlightColor } from "./extensions";
 
 interface Span {
   from: number;
@@ -53,6 +54,8 @@ export function AnnotatableView({ body, onBodyChange }: { body: string; onBodyCh
   const [pop, setPop] = useState<Pop | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [photo, setPhoto] = useState<number | null>(null);
+  const photos = imageIds(body);
 
   const editor = useEditor({
     extensions: baseExtensions,
@@ -161,7 +164,9 @@ export function AnnotatableView({ body, onBodyChange }: { body: string; onBodyCh
   return (
     <>
       <div ref={wrap} onClick={onClick}>
-        <EditorContent editor={editor} className="rich text-[17px] leading-7 md:text-[18px] md:leading-8" />
+        <OpenPhotoContext.Provider value={(id) => setPhoto(Math.max(0, photos.indexOf(id)))}>
+          <EditorContent editor={editor} className="rich text-[17px] leading-7 md:text-[18px] md:leading-8" />
+        </OpenPhotoContext.Provider>
       </div>
       {pop && (
         <div
@@ -228,6 +233,14 @@ export function AnnotatableView({ body, onBodyChange }: { body: string; onBodyCh
         </div>
       )}
 
+      {photo !== null && (
+        <PhotoViewer
+          slides={photos.map((id) => ({ id, mediaId: id }))}
+          index={Math.min(photo, photos.length - 1)}
+          onIndex={setPhoto}
+          onClose={() => setPhoto(null)}
+        />
+      )}
     </>
   );
 }

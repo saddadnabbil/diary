@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import { BUILTIN_PROVIDER, DEFAULT_PROVIDER_ID } from "./providers";
+import { cleanMood } from "./moods";
 import { MAX_BODY_CHARS } from "./sync-schema";
 import type { AppSettings, Entry, LlmProvider, StoredImage } from "./types";
 
@@ -170,7 +171,6 @@ export async function exportEntries(): Promise<string> {
 export async function importEntries(json: string): Promise<number> {
   const data = JSON.parse(json) as { app?: string; entries?: Partial<Entry>[] };
   if (data.app !== "diary" || !Array.isArray(data.entries)) throw new Error("Not a Diary export file.");
-  const moods = new Set(["Calm", "Happy", "Tired", "Anxious", "Grateful"]);
   const normalised: Entry[] = [];
   for (const e of data.entries) {
     if (typeof e.id !== "string" || !/^[A-Za-z0-9_-]{8,64}$/.test(e.id)) continue;
@@ -179,7 +179,7 @@ export async function importEntries(json: string): Promise<number> {
       id: e.id,
       title: typeof e.title === "string" ? e.title.slice(0, 200) : "",
       body: e.body.slice(0, MAX_BODY_CHARS),
-      mood: e.mood && moods.has(e.mood) ? e.mood : null,
+      mood: cleanMood(e.mood),
       promptUsed: typeof e.promptUsed === "string" ? e.promptUsed.slice(0, 300) : null,
       createdAt: Math.trunc(e.createdAt),
       updatedAt: typeof e.updatedAt === "number" && Number.isFinite(e.updatedAt) ? Math.trunc(e.updatedAt) : Math.trunc(e.createdAt),

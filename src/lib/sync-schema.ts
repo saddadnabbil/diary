@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MOODS } from "./types";
+import { MAX_MOOD_LENGTH } from "./moods";
 
 /** Bodies are rich-text JSON, which is much more verbose than the visible text. */
 export const MAX_BODY_CHARS = 200_000;
@@ -12,7 +12,7 @@ export const WireEntry = z.object({
   id: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
   title: z.string().max(200),
   body: z.string().max(MAX_BODY_CHARS),
-  mood: z.enum(MOODS).nullable(),
+  mood: z.string().trim().min(1).max(MAX_MOOD_LENGTH).nullable(),
   promptUsed: z.string().max(300).nullable(),
   // Older clients send neither field; they default to a plain entry with no photo.
   kind: z.enum(["entry", "story"]).default("entry"),

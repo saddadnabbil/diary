@@ -1,5 +1,5 @@
-export const MOODS = ["Calm", "Happy", "Tired", "Anxious", "Grateful"] as const;
-export type Mood = (typeof MOODS)[number];
+/** A preset ("Calm", "Happy"…) or a name the person added themselves. */
+export type Mood = string;
 
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "night";
 

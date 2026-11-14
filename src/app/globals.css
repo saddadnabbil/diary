@@ -83,11 +83,31 @@ body {
   }
 }
 
+/* Story progress bar: grows over the story's duration; its end moves to the next story. */
+@keyframes story-progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.story-progress {
+  animation-name: story-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Photos after the first of a run are drawn by the first one's slider. */
+.photo-run-hidden {
+  display: none !important;
 }
 
 /* Rich text (entry bodies) */

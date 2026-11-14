@@ -3,12 +3,13 @@ import { z } from "zod";
 import { describeModelError, ProviderInput, resolveModel } from "@/lib/server/model";
 import { guard } from "@/lib/server/guard";
 import { apiError, json, readJson } from "@/lib/server/http";
-import { MOODS } from "@/lib/types";
+import { MAX_MOOD_LENGTH } from "@/lib/moods";
 
 export const maxDuration = 30;
 
 const Body = z.object({
-  mood: z.enum(MOODS).nullable(),
+  // Custom moods are free text that ends up in the model prompt: short, single line, no control characters.
+  mood: z.string().trim().min(1).max(MAX_MOOD_LENGTH).regex(/^[^\u0000-\u001f\u007f]+$/).nullable(),
   timeOfDay: z.enum(["morning", "afternoon", "evening", "night"]),
   /** Titles of recent entries, only sent when the user opted in. Themes only, never bodies. */
   recentTitles: z.array(z.string().max(80)).max(3).default([]),

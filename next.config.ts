@@ -33,6 +33,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Lets a Cloudflare quick tunnel load the dev server (dev only; ignored in builds).
+  allowedDevOrigins: ["*.trycloudflare.com"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

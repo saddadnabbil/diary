@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { formatShort } from "@/lib/dates";
-import { plainText } from "@/lib/rich";
-import { StoryRow } from "./story-view";
+import { Fragment } from "react";
+import { dayKey, formatShort } from "@/lib/dates";
+import { imageIds, plainText } from "@/lib/rich";
+import { MediaStrip } from "./media-strip";
+import { StoryGroup } from "./story-view";
 import type { Entry } from "@/lib/types";
 
 export function entryPreview(e: Entry, max = 160): string {
@@ -9,8 +11,27 @@ export function entryPreview(e: Entry, max = 160): string {
   return flat.length > max ? flat.slice(0, max).trimEnd() + "…" : flat;
 }
 
+/** Entries in order, with stories of the same day next to each other folded into one row of photos. */
+export function EntryList({ entries }: { entries: Entry[] }) {
+  const runs: Entry[][] = [];
+  for (const e of entries) {
+    const last = runs[runs.length - 1];
+    const prev = last?.[last.length - 1];
+    if (e.kind === "story" && prev?.kind === "story" && dayKey(new Date(prev.createdAt)) === dayKey(new Date(e.createdAt))) last.push(e);
+    else runs.push([e]);
+  }
+  return (
+    <>
+      {runs.map((run) => (
+        <Fragment key={run[0].id}>{run[0].kind === "story" ? <StoryGroup stories={run} /> : <EntryRow entry={run[0]} />}</Fragment>
+      ))}
+    </>
+  );
+}
+
 export function EntryRow({ entry }: { entry: Entry }) {
-  if (entry.kind === "story") return <StoryRow entry={entry} />;
+  if (entry.kind === "story") return <StoryGroup stories={[entry]} />;
+  const photos = imageIds(entry.body);
   return (
     <Link
       href={`/entries/${entry.id}`}
@@ -20,12 +41,13 @@ export function EntryRow({ entry }: { entry: Entry }) {
         {formatShort(entry.createdAt)}
         <span className="md:hidden">{entry.mood ? `  ·  ${entry.mood}` : ""}</span>
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7 group-hover:underline underline-offset-4 decoration-line">
           {entry.title.trim() || "Untitled"}
         </span>
         <span className="line-clamp-2 text-[15px] leading-6 text-fg-2">{entryPreview(entry)}</span>
-      </span>
+        {photos.length > 0 && <MediaStrip className="mt-2" maxHeight={240} minHeight={120} items={photos.map((mediaId) => ({ mediaId }))} />}
+      </div>
       {entry.mood && <span className="hidden text-[13px] leading-[18px] text-fg-3 md:block md:pt-1.5">{entry.mood}</span>}
     </Link>
   );

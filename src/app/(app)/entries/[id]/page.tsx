@@ -10,7 +10,7 @@ import { Button, LinkButton } from "@/components/ui";
 import { BackToTop } from "@/components/back-to-top";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { AnnotatableView } from "@/components/rich/annotatable-view";
-import { StoryDetail } from "@/components/story-view";
+import { StoryViewer } from "@/components/story-view";
 import { useEntry } from "@/hooks/use-entries";
 import { deleteEntry, saveEntry } from "@/lib/db";
 import { formatLong, formatTime, wordCount } from "@/lib/dates";
@@ -23,9 +23,14 @@ export default function EntryDetailPage({ params }: PageProps<"/entries/[id]">) 
   const entry = useEntry(id);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [story, setStory] = useState(false);
 
   // Static prompts here: reading an entry should not spend a model call.
   const followUp = useMemo(() => pickPrompts({ mood: entry?.mood ?? null, count: 1 })[0], [entry?.mood]);
+
+  // Once a story is open, the viewer owns the screen, even if that story is then deleted.
+  if (entry?.kind === "story" && !story) setStory(true);
+  if (story) return <StoryViewer startId={id} />;
 
   if (entry === undefined) return <Page><p className="text-[15px] text-fg-2">Loading…</p></Page>;
   if (entry === null) {
@@ -40,13 +45,6 @@ export default function EntryDetailPage({ params }: PageProps<"/entries/[id]">) 
     );
   }
 
-  if (entry.kind === "story") {
-    return (
-      <Page>
-        <StoryDetail entry={entry} />
-      </Page>
-    );
-  }
 
   const words = wordCount(plainText(entry.body));
 

@@ -10,7 +10,9 @@ import { wordCount } from "@/lib/dates";
 import { ImageError, storeImage } from "@/lib/images";
 import { isEmptyBody, parseBody, plainText } from "@/lib/rich";
 import { MAX_BODY_CHARS } from "@/lib/sync-schema";
-import { MOODS, type Entry, type Mood, type Suggestion } from "@/lib/types";
+import { cleanMood, matchMood, MAX_MOOD_LENGTH } from "@/lib/moods";
+import { useMoodOptions } from "@/hooks/use-entries";
+import type { Entry, Mood, Suggestion } from "@/lib/types";
 import { DatePicker } from "./date-picker";
 import { editorExtensions } from "./rich/extensions";
 import { EditorToolbar } from "./rich/toolbar";
@@ -41,6 +43,11 @@ function EditorForm({ entry, initialPrompt, initialDate }: { entry?: Entry; init
   const [title, setTitle] = useState(entry?.title ?? "");
   const [body, setBody] = useState(entry?.body ?? "");
   const [mood, setMood] = useState<Mood | null>(entry?.mood ?? null);
+  // Moods added in this session stay in the list even if the entry is saved without them.
+  const [addedMoods, setAddedMoods] = useState<string[]>([]);
+  const moods = useMoodOptions(mood ? [...addedMoods, mood] : addedMoods);
+  const [addingMood, setAddingMood] = useState(false);
+  const [moodDraft, setMoodDraft] = useState("");
   const [prompt, setPrompt] = useState<string | null>(entry?.promptUsed ?? initialPrompt ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
@@ -173,7 +180,7 @@ function EditorForm({ entry, initialPrompt, initialDate }: { entry?: Entry; init
 
         <div className="no-scrollbar -mx-6 mt-5 flex items-center gap-2 overflow-x-auto px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0" role="group" aria-label="Mood">
           <span className="mr-1 shrink-0 text-[13px] leading-[18px] text-fg-3">Mood</span>
-          {MOODS.map((m) => (
+          {moods.map((m) => (
             <Chip
               key={m}
               selected={mood === m}
@@ -185,6 +192,51 @@ function EditorForm({ entry, initialPrompt, initialDate }: { entry?: Entry; init
               {m}
             </Chip>
           ))}
+          {addingMood ? (
+            <form
+              className="flex shrink-0 items-center gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const name = matchMood(moodDraft, moods);
+                if (name) {
+                  setAddedMoods((prev) => (prev.includes(name) ? prev : [...prev, name]));
+                  setMood(name);
+                  touch();
+                }
+                setMoodDraft("");
+                setAddingMood(false);
+              }}
+            >
+              <label className="sr-only" htmlFor="new-mood">
+                New mood
+              </label>
+              <input
+                id="new-mood"
+                autoFocus
+                value={moodDraft}
+                maxLength={MAX_MOOD_LENGTH}
+                onChange={(e) => setMoodDraft(e.target.value)}
+                onBlur={() => {
+                  if (!cleanMood(moodDraft)) setAddingMood(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setMoodDraft("");
+                    setAddingMood(false);
+                  }
+                }}
+                placeholder="Your mood"
+                className="w-[120px] rounded-full border border-fg bg-bg px-3.5 py-1.5 text-[13px] leading-[18px] placeholder:text-fg-3 focus:outline-none"
+              />
+              <button type="submit" disabled={!cleanMood(moodDraft)} className="rounded-full bg-primary px-3.5 py-1.5 text-[13px] leading-[18px] font-medium text-on-primary disabled:opacity-40">
+                Add
+              </button>
+            </form>
+          ) : (
+            <Chip onClick={() => setAddingMood(true)} aria-label="Add your own mood">
+              + Add
+            </Chip>
+          )}
         </div>
 
         {prompt && (

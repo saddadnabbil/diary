@@ -5,10 +5,14 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Mark, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect } from "react";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { createContext, useContext } from "react";
+import { MediaStrip } from "@/components/media-strip";
+import { cx } from "@/components/ui";
 import { db } from "@/lib/db";
 import { embedHeight, embedUrl, parseStoredMusicUri, providerName, type MusicRef } from "@/lib/music";
-import { fetchRemoteImage } from "@/lib/sync";
 
 // Object URLs are cached per image for the life of the page: cheap, and safe under React strict mode.
 const urlCache = new Map<string, string>();
@@ -26,27 +30,63 @@ export function useImageUrl(imageId: string | null): string | null | undefined {
   return url;
 }
 
-function ImageView({ node, selected }: NodeViewProps) {
+/** Opens the full-screen viewer at one photo of the entry (by image id). Reading view only. */
+export const OpenPhotoContext = createContext<((imageId: string) => void) | null>(null);
+
+interface RunPhoto {
+  imageId: string;
+  pos: number;
+}
+const runKey = new PluginKey<DecorationSet>("photoRuns");
+
+/**
+ * Photos in a row (only blank lines between them) show as one slider, like X's multi-photo posts.
+ * The body is untouched: the first photo of a run draws the whole row, the rest of the run is hidden.
+ */
+function photoRunDecorations(doc: PMNode): DecorationSet {
+  const decos: Decoration[] = [];
+  const blocks: { node: PMNode; pos: number }[] = [];
+  doc.forEach((node, pos) => blocks.push({ node, pos }));
+  const isPhoto = (n: PMNode) => n.type.name === "image" && typeof n.attrs.imageId === "string";
+  const isBlank = (n: PMNode) => n.type.name === "paragraph" && n.content.size === 0;
+  for (let i = 0; i < blocks.length; i++) {
+    if (!isPhoto(blocks[i].node)) continue;
+    let end = i;
+    for (let j = i + 1; j < blocks.length; j++) {
+      if (isPhoto(blocks[j].node)) end = j;
+      else if (!isBlank(blocks[j].node)) break;
+    }
+    const run: RunPhoto[] = blocks.slice(i, end + 1).filter((b) => isPhoto(b.node)).map((b) => ({ imageId: b.node.attrs.imageId as string, pos: b.pos }));
+    const first = blocks[i];
+    decos.push(Decoration.node(first.pos, first.pos + first.node.nodeSize, { "data-run": JSON.stringify(run) }, { run }));
+    for (const b of blocks.slice(i + 1, end + 1)) decos.push(Decoration.node(b.pos, b.pos + b.node.nodeSize, { class: "photo-run-hidden" }));
+    i = end;
+  }
+  return DecorationSet.create(doc, decos);
+}
+
+function ImageView({ node, selected, decorations, editor }: NodeViewProps) {
   const imageId = (node.attrs.imageId as string | null) ?? null;
-  const url = useImageUrl(imageId);
-  // Not on this device yet (added elsewhere): fetch it from the cloud.
-  useEffect(() => {
-    if (url === null && imageId) void fetchRemoteImage(imageId);
-  }, [url, imageId]);
+  const open = useContext(OpenPhotoContext);
+  const runDeco = decorations.find((d) => (d as unknown as { spec?: { run?: RunPhoto[] } }).spec?.run);
+  const run = ((runDeco as unknown as { spec?: { run?: RunPhoto[] } })?.spec?.run ?? [{ imageId, pos: -1 }]) as RunPhoto[];
+  const editable = editor.isEditable;
+
+  function remove(i: number) {
+    const target = run[i];
+    const n = target && editor.state.doc.nodeAt(target.pos);
+    if (!n) return;
+    editor.chain().focus().deleteRange({ from: target.pos, to: target.pos + n.nodeSize }).run();
+  }
+
   return (
-    <NodeViewWrapper className="my-3">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={url}
-          alt=""
-          className={`max-h-[520px] max-w-full rounded-[14px] border border-line ${selected ? "outline-2 outline-offset-2 outline-fg" : ""}`}
-        />
-      ) : (
-        <div className="flex h-24 items-center justify-center rounded-[14px] bg-surface text-[13px] text-fg-3">
-          {url === undefined ? "Loading image…" : "Loading from cloud…"}
-        </div>
-      )}
+    <NodeViewWrapper className={cx("my-3 rounded-[16px]", selected && "outline-2 outline-offset-2 outline-fg")} contentEditable={false}>
+      <MediaStrip
+        maxHeight={460}
+        items={run.map((r) => ({ mediaId: r.imageId }))}
+        onOpen={!editable && open ? (i) => open(run[i].imageId!) : undefined}
+        onRemove={editable ? remove : undefined}
+      />
     </NodeViewWrapper>
   );
 }
@@ -63,7 +103,26 @@ export const DiaryImage = Image.extend({
     return ["img", { "data-image-id": HTMLAttributes.imageId }];
   },
   addNodeView() {
-    return ReactNodeViewRenderer(ImageView);
+    // Re-render when only the decorations change too: that is how a photo learns the rest of its run.
+    return ReactNodeViewRenderer(ImageView, {
+      update: ({ oldNode, newNode, updateProps }) => {
+        if (newNode.type !== oldNode.type) return false;
+        updateProps();
+        return true;
+      },
+    });
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin<DecorationSet>({
+        key: runKey,
+        state: {
+          init: (_, state) => photoRunDecorations(state.doc),
+          apply: (tr, old) => (tr.docChanged ? photoRunDecorations(tr.doc) : old),
+        },
+        props: { decorations: (state) => runKey.getState(state) },
+      }),
+    ];
   },
 });
 

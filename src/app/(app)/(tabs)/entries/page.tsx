@@ -2,17 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { BackToTop } from "@/components/back-to-top";
-import { EntryRow } from "@/components/entry-row";
+import { EntryList } from "@/components/entry-row";
 import { SearchIcon } from "@/components/icons";
 import { Page } from "@/components/page";
 import { Chip, LinkButton, PageTitle } from "@/components/ui";
-import { useEntries } from "@/hooks/use-entries";
+import { useEntries, useMoodOptions } from "@/hooks/use-entries";
 import { dayKey, formatLong, formatMonthYear, formatShort } from "@/lib/dates";
 import { plainText } from "@/lib/rich";
-import { MOODS, type Entry, type Mood } from "@/lib/types";
+import type { Entry, Mood } from "@/lib/types";
 
 export default function EntriesPage() {
   const entries = useEntries();
+  const moods = useMoodOptions();
   const [query, setQuery] = useState("");
   const [mood, setMood] = useState<Mood | null>(null);
 
@@ -71,7 +72,7 @@ export default function EntriesPage() {
           <Chip selected={mood === null} onClick={() => setMood(null)}>
             All
           </Chip>
-          {MOODS.map((m) => (
+          {moods.map((m) => (
             <Chip key={m} selected={mood === m} onClick={() => setMood(mood === m ? null : m)}>
               {m}
             </Chip>
@@ -91,9 +92,7 @@ export default function EntriesPage() {
           <section key={month} className="mt-8" aria-label={month}>
             <h2 className="text-[13px] leading-[18px] font-medium text-fg-3">{month}</h2>
             <div className="mt-1">
-              {list.map((e) => (
-                <EntryRow key={e.id} entry={e} />
-              ))}
+              <EntryList entries={list} />
             </div>
           </section>
         ))
