@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { dayKey, formatShort } from "@/lib/dates";
 import { imageIds, plainText } from "@/lib/rich";
-import { MediaStrip } from "./media-strip";
-import { LIST_PHOTO_HEIGHT, StoryGroup } from "./story-view";
+import { Thumb } from "./media-strip";
+import { StoryGroup } from "./story-view";
 import type { Entry } from "@/lib/types";
 
 export function entryPreview(e: Entry, max = 160): string {
@@ -47,12 +47,15 @@ export function EntryRow({ entry }: { entry: Entry }) {
           </>
         )}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7 group-hover:underline underline-offset-4 decoration-line">
-          {entry.title.trim() || "Untitled"}
-        </span>
-        <span className="line-clamp-2 text-[15px] leading-6 text-fg-2">{entryPreview(entry)}</span>
-        {photos.length > 0 && <MediaStrip className="mt-2" height={LIST_PHOTO_HEIGHT} fill items={photos.map((mediaId) => ({ mediaId }))} />}
+      {/* Text on the left, the photo on the right at its own shape: short text never leaves a hole. */}
+      <div className="flex min-w-0 flex-1 items-start gap-4 md:gap-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7 group-hover:underline underline-offset-4 decoration-line">
+            {entry.title.trim() || "Untitled"}
+          </span>
+          <span className={photos.length ? "line-clamp-3 text-[15px] leading-6 text-fg-2" : "line-clamp-2 text-[15px] leading-6 text-fg-2"}>{entryPreview(entry)}</span>
+        </div>
+        {photos.length > 0 && <Thumb mediaId={photos[0]} more={photos.length - 1} className="h-[104px] md:h-[136px]" />}
       </div>
     </Link>
   );

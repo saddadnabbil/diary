@@ -190,3 +190,65 @@ function StripPhoto({
     </button>
   );
 }
+
+/**
+ * A list thumbnail that keeps the photo's own shape at a fixed height (set by className):
+ * a vertical photo stays narrow, a wide one is cropped to at most 4:3. "+N" marks more photos.
+ */
+export function Thumb({ mediaId, more = 0, className }: { mediaId: string | null; more?: number; className?: string }) {
+  const url = useImageUrl(mediaId);
+  const [ratio, setRatio] = useState(0.8);
+  useEffect(() => {
+    if (url === null && mediaId) void fetchRemoteImage(mediaId);
+  }, [url, mediaId]);
+  return (
+    <span
+      className={cx("relative block shrink-0 overflow-hidden rounded-[12px] border border-line bg-surface", className)}
+      style={{ aspectRatio: Math.min(4 / 3, Math.max(0.6, ratio)) }}
+    >
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt=""
+          draggable={false}
+          onLoad={(e) => {
+            const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+            if (w && h) setRatio(w / h);
+          }}
+          className="size-full object-cover"
+        />
+      )}
+      {more > 0 && (
+        <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[12px] leading-4 font-medium text-white backdrop-blur">
+          +{more}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** A story in the list: a small 9:16 card, like an Instagram highlight. */
+export function StoryCard({ mediaId, more = 0, label, onOpen, className }: { mediaId: string | null; more?: number; label: string; onOpen: () => void; className?: string }) {
+  const url = useImageUrl(mediaId);
+  useEffect(() => {
+    if (url === null && mediaId) void fetchRemoteImage(mediaId);
+  }, [url, mediaId]);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={label}
+      className={cx(
+        "relative block aspect-[9/16] shrink-0 overflow-hidden rounded-[12px] border border-line bg-surface transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg",
+        className,
+      )}
+    >
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" draggable={false} className="size-full object-cover" />
+      )}
+      {more > 0 && <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[15px] font-semibold text-white">+{more}</span>}
+    </button>
+  );
+}

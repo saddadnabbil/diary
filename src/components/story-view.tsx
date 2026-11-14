@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { MediaStrip } from "@/components/media-strip";
+import { StoryCard } from "@/components/media-strip";
 import { PhotoViewer, type Slide } from "@/components/photo-viewer";
 import { useEntries } from "@/hooks/use-entries";
 import { deleteEntry, saveEntry } from "@/lib/db";
@@ -11,8 +11,6 @@ import { dayKey, formatLong, formatShort, formatTime } from "@/lib/dates";
 import type { Entry } from "@/lib/types";
 
 export const STORY_CAPTION_MAX = 120;
-/** Photos in the entries list share one height, stories and entries alike. */
-export const LIST_PHOTO_HEIGHT = 200;
 
 /* Set when a story is opened from inside the app, so closing can go back to where it was. */
 let openedFromApp = false;
@@ -23,26 +21,37 @@ export function StoryGroup({ stories: newestFirst }: { stories: Entry[] }) {
   // Like Instagram: a day's stories play from the earliest.
   const stories = [...newestFirst].reverse();
   const first = stories[0];
+  const shown = stories.slice(0, 3);
+  const captions = stories.map((s) => s.title.trim()).filter(Boolean).join(" · ");
   return (
     // Same columns as an entry row (date left, content right) so the list reads as one.
     <div className="flex flex-col gap-1.5 border-b border-line py-5 md:flex-row md:gap-8 md:py-6">
       <span className="text-[13px] leading-[18px] text-fg-3 md:w-[72px] md:shrink-0 md:pt-1 md:text-[14px] md:leading-6">
         {formatShort(first.createdAt)}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7">
-          {stories.length === 1 ? "Story" : `${stories.length} stories`}
-        </span>
-        <MediaStrip
-          className="mt-2"
-          height={LIST_PHOTO_HEIGHT}
-          fill
-        items={stories.map((s) => ({ mediaId: s.mediaId ?? null, label: s.title.trim() || undefined }))}
-        onOpen={(i) => {
-          openedFromApp = true;
-          router.push(`/entries/${stories[i].id}`);
-        }}
-        />
+      <div className="flex min-w-0 flex-1 items-start gap-4 md:gap-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7">
+            {stories.length === 1 ? "Story" : `${stories.length} stories`}
+          </span>
+          {captions && <span className="line-clamp-3 text-[15px] leading-6 text-fg-2">{captions}</span>}
+        </div>
+        {/* Up to three 9:16 cards, like Instagram highlights; the last one counts the rest. */}
+        <div className="flex shrink-0 gap-1.5 md:gap-2">
+          {shown.map((s, i) => (
+            <StoryCard
+              key={s.id}
+              mediaId={s.mediaId ?? null}
+              more={i === shown.length - 1 ? stories.length - shown.length : 0}
+              label={`Open story ${i + 1} of ${stories.length}${s.title.trim() ? `: ${s.title.trim()}` : ""}`}
+              onOpen={() => {
+                openedFromApp = true;
+                router.push(`/entries/${s.id}`);
+              }}
+              className="h-[104px] md:h-[136px]"
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
