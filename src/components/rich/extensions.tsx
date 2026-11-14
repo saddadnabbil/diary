@@ -80,7 +80,11 @@ function ImageView({ node, selected, decorations, editor }: NodeViewProps) {
   }
 
   return (
-    <NodeViewWrapper className={cx("my-3 rounded-[16px]", selected && "outline-2 outline-offset-2 outline-fg")} contentEditable={false}>
+    <NodeViewWrapper
+      // Only show the selection while editing: a read-only view can still "select" its first photo.
+      className={cx("my-4 rounded-[16px]", editable && selected && "outline-2 outline-offset-2 outline-fg/60")}
+      contentEditable={false}
+    >
       <MediaStrip
         maxHeight={460}
         items={run.map((r) => ({ mediaId: r.imageId }))}
