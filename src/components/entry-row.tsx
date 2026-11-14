@@ -52,7 +52,7 @@ export function EntryRow({ entry }: { entry: Entry }) {
           {entry.title.trim() || "Untitled"}
         </span>
         <span className="line-clamp-2 text-[15px] leading-6 text-fg-2">{entryPreview(entry)}</span>
-        {photos.length > 0 && <MediaStrip className="mt-2" height={LIST_PHOTO_HEIGHT} items={photos.map((mediaId) => ({ mediaId }))} />}
+        {photos.length > 0 && <MediaStrip className="mt-2" height={LIST_PHOTO_HEIGHT} fill items={photos.map((mediaId) => ({ mediaId }))} />}
       </div>
     </Link>
   );

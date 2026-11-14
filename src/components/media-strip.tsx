@@ -27,6 +27,7 @@ export function MediaStrip({
   onOpen,
   onRemove,
   height: fixedHeight,
+  fill = false,
   className,
   rounded = "rounded-[16px]",
 }: {
@@ -38,6 +39,11 @@ export function MediaStrip({
   onRemove?: (index: number) => void;
   /** Lists: one height for every row so they line up; only the widths follow each photo's shape. */
   height?: number;
+  /**
+   * Never leave the row half empty: when the photos are narrower than the row, they widen to fill it
+   * and each shows whole on a blurred copy of itself.
+   */
+  fill?: boolean;
   className?: string;
   rounded?: string;
 }) {
@@ -60,7 +66,11 @@ export function MediaStrip({
   const clamp = (r: number) => Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
   const first = clamp(ratios[0] ?? 1);
   const height = fixedHeight ?? (width ? Math.round(Math.max(minHeight, Math.min(maxHeight, room / first))) : minHeight);
-  const widthOf = (i: number) => Math.round(Math.min(width || Infinity, height * clamp(ratios[i] ?? 1)));
+  const natural = items.map((_, i) => Math.min(width || Infinity, height * clamp(ratios[i] ?? 1)));
+  const used = natural.reduce((a, b) => a + b, 0) + GAP * (items.length - 1);
+  // Stretch every photo by the same factor so their sizes stay in proportion.
+  const grow = fill && width && used < width ? (width - GAP * (items.length - 1)) / (used - GAP * (items.length - 1)) : 1;
+  const widthOf = (i: number) => Math.round(natural[i] * grow);
 
   return (
     <div
@@ -74,6 +84,7 @@ export function MediaStrip({
           item={item}
           width={widthOf(i)}
           height={height}
+          padded={grow > 1}
           rounded={rounded}
           onRatio={(r) => setRatios((prev) => (prev[i] === r ? prev : { ...prev, [i]: r }))}
           onOpen={onOpen ? () => onOpen(i) : undefined}
@@ -89,6 +100,7 @@ function StripPhoto({
   item,
   width,
   height,
+  padded,
   rounded,
   onRatio,
   onOpen,
@@ -98,6 +110,8 @@ function StripPhoto({
   item: StripItem;
   width: number;
   height: number;
+  /** Wider than the photo: show it whole over a blurred, cropped copy instead of cropping it. */
+  padded: boolean;
   rounded: string;
   onRatio: (r: number) => void;
   onOpen?: () => void;
@@ -111,6 +125,10 @@ function StripPhoto({
 
   const inner = (
     <>
+      {url && padded && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" aria-hidden="true" draggable={false} className="absolute inset-0 size-full scale-110 object-cover opacity-70 blur-xl" />
+      )}
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -121,7 +139,7 @@ function StripPhoto({
             const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
             if (w && h) onRatio(w / h);
           }}
-          className="size-full object-cover"
+          className={cx("relative size-full", padded ? "object-contain" : "object-cover")}
         />
       ) : (
         <span className="flex size-full items-center justify-center text-[13px] text-fg-3">{url === undefined ? "Loading…" : "Loading from cloud…"}</span>

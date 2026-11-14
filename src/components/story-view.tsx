@@ -36,6 +36,7 @@ export function StoryGroup({ stories: newestFirst }: { stories: Entry[] }) {
         <MediaStrip
           className="mt-2"
           height={LIST_PHOTO_HEIGHT}
+          fill
         items={stories.map((s) => ({ mediaId: s.mediaId ?? null, label: s.title.trim() || undefined }))}
         onOpen={(i) => {
           openedFromApp = true;
