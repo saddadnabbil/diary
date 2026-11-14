@@ -26,6 +26,7 @@ export function MediaStrip({
   minHeight = 140,
   onOpen,
   onRemove,
+  height: fixedHeight,
   className,
   rounded = "rounded-[16px]",
 }: {
@@ -35,6 +36,8 @@ export function MediaStrip({
   onOpen?: (index: number) => void;
   /** Shows a remove button on each photo (editing). */
   onRemove?: (index: number) => void;
+  /** Lists: one height for every row so they line up; only the widths follow each photo's shape. */
+  height?: number;
   className?: string;
   rounded?: string;
 }) {
@@ -56,7 +59,7 @@ export function MediaStrip({
   const room = multi ? width * 0.82 : width;
   const clamp = (r: number) => Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
   const first = clamp(ratios[0] ?? 1);
-  const height = width ? Math.round(Math.max(minHeight, Math.min(maxHeight, room / first))) : minHeight;
+  const height = fixedHeight ?? (width ? Math.round(Math.max(minHeight, Math.min(maxHeight, room / first))) : minHeight);
   const widthOf = (i: number) => Math.round(Math.min(width || Infinity, height * clamp(ratios[i] ?? 1)));
 
   return (

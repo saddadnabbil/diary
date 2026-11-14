@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { dayKey, formatShort } from "@/lib/dates";
 import { imageIds, plainText } from "@/lib/rich";
 import { MediaStrip } from "./media-strip";
-import { StoryGroup } from "./story-view";
+import { LIST_PHOTO_HEIGHT, StoryGroup } from "./story-view";
 import type { Entry } from "@/lib/types";
 
 export function entryPreview(e: Entry, max = 160): string {
@@ -39,16 +39,21 @@ export function EntryRow({ entry }: { entry: Entry }) {
     >
       <span className="text-[13px] leading-[18px] text-fg-3 md:w-[72px] md:shrink-0 md:pt-1 md:text-[14px] md:leading-6">
         {formatShort(entry.createdAt)}
-        <span className="md:hidden">{entry.mood ? `  ·  ${entry.mood}` : ""}</span>
+        {/* Mood sits with the date (beside it on phones, under it on desktop) so every row's content has the same width. */}
+        {entry.mood && (
+          <>
+            <span className="md:hidden">{`  ·  ${entry.mood}`}</span>
+            <span className="hidden truncate text-[13px] leading-[18px] md:mt-1 md:block">{entry.mood}</span>
+          </>
+        )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="text-[18px] leading-[26px] font-medium tracking-[-0.015em] md:text-[20px] md:leading-7 group-hover:underline underline-offset-4 decoration-line">
           {entry.title.trim() || "Untitled"}
         </span>
         <span className="line-clamp-2 text-[15px] leading-6 text-fg-2">{entryPreview(entry)}</span>
-        {photos.length > 0 && <MediaStrip className="mt-2" maxHeight={240} minHeight={120} items={photos.map((mediaId) => ({ mediaId }))} />}
+        {photos.length > 0 && <MediaStrip className="mt-2" height={LIST_PHOTO_HEIGHT} items={photos.map((mediaId) => ({ mediaId }))} />}
       </div>
-      {entry.mood && <span className="hidden text-[13px] leading-[18px] text-fg-3 md:block md:pt-1.5">{entry.mood}</span>}
     </Link>
   );
 }
