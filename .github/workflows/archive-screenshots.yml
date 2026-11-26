@@ -16,6 +16,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
       - name: Start Diary
         run: |
           printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .dev.vars
@@ -43,6 +44,26 @@ jobs:
                 await page.locator('img').first().waitFor();
                 await page.waitForFunction(() => [...document.querySelectorAll('img')].some(img => img.complete && img.naturalWidth > 0));
                 await page.screenshot({ path: 'screenshots/' + label + '.png', fullPage: true, style: 'nextjs-portal { display: none !important; }' });
+                await page.getByLabel('Calendar').fill('2024-12-01');
+                await page.getByRole('heading', { name: 'A weekend away' }).waitFor();
+                if (await page.getByRole('heading', { name: 'An afternoon in town' }).count()) throw new Error('Calendar did not filter older entries.');
+                await page.getByRole('button', { name: /View post/ }).click();
+                const detail = page.getByRole('dialog');
+                await detail.getByText('That lake looks unreal.').waitFor();
+                await detail.getByRole('button', { name: 'Next photo' }).click();
+                await detail.getByText('2 / 2').waitFor();
+                await page.screenshot({ path: 'screenshots/' + label + '-post.png', style: 'nextjs-portal { display: none !important; }' });
+                await detail.getByRole('button', { name: 'Close' }).click();
+                await page.getByRole('link', { name: 'Messages' }).click();
+                await page.getByRole('button', { name: 'Maya' }).click();
+                const chat = page.getByRole('region', { name: 'Conversation with Maya' });
+                await chat.getByText('Did you keep any photos from the trip?').waitFor();
+                await chat.getByRole('img', { name: 'A lake beneath the mountains' }).waitFor();
+                await page.waitForFunction(() => {
+                  const chat = document.querySelector('[aria-label="Conversation with Maya"]');
+                  return chat?.querySelector('video')?.readyState >= 1 && chat?.querySelector('img')?.naturalWidth > 0;
+                }, null, { timeout: 20000 });
+                await page.screenshot({ path: 'screenshots/' + label + '-messages.png', fullPage: true, style: 'nextjs-portal { display: none !important; }' });
                 await page.close();
               }
             } finally {
