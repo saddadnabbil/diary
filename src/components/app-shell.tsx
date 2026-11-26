@@ -16,6 +16,7 @@ const TABS = [
   { href: "/calendar", label: "Calendar", Icon: CalendarIcon },
   { href: "/entries", label: "Entries", Icon: EntriesIcon },
   { href: "/settings", label: "Settings", Icon: SettingsIcon },
+  { href: "/archive", label: "Archive", Icon: EntriesIcon },
 ] as const;
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(href + "/");
