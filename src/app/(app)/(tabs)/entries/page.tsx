@@ -51,9 +51,10 @@ export default function EntriesPage() {
     <Page>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageTitle sub={total ? `${total} ${total === 1 ? "entry" : "entries"} so far.` : undefined}>Your entries.</PageTitle>
-        <LinkButton href="/story/new" variant="secondary" className="mb-1">
-          Add a story
-        </LinkButton>
+        <div className="mb-1 flex flex-wrap gap-2">
+          <LinkButton href="/archive" variant="secondary">Instagram archive</LinkButton>
+          <LinkButton href="/story/new" variant="secondary">Add a story</LinkButton>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-4 md:mt-10">
