@@ -1,0 +1,58 @@
+name: Archive screenshots
+on:
+  push:
+    branches: [preview/archive-screenshots]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start Diary
+        run: |
+          printf 'BETTER_AUTH_SECRET=%s\n' "$(openssl rand -hex 32)" > .dev.vars
+          pnpm db:migrate:local
+          pnpm dev --hostname 127.0.0.1 > /tmp/diary-preview.log 2>&1 &
+      - name: Capture screenshots
+        run: |
+          mkdir -p /tmp/diary-capture screenshots
+          npm install --prefix /tmp/diary-capture playwright
+          /tmp/diary-capture/node_modules/.bin/playwright install --with-deps chromium
+          node <<'JS'
+          const { chromium } = require('/tmp/diary-capture/node_modules/playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            try {
+              for (const [label, viewport] of Object.entries({
+                desktop: { width: 1440, height: 1000 },
+                mobile: { width: 390, height: 844 },
+              })) {
+                const page = await browser.newPage({ viewport, colorScheme: 'light' });
+                await page.goto('http://127.0.0.1:3000/onboarding/storage', { timeout: 90000 });
+                await page.getByRole('radio', { name: /Local only/ }).click();
+                await page.getByRole('button', { name: 'Start writing' }).click();
+                await page.waitForURL('**/dashboard');
+                await page.goto('http://127.0.0.1:3000/archive');
+                await page.getByRole('heading', { name: 'Instagram archive.' }).waitFor();
+                await page.locator('img').first().waitFor();
+                await page.waitForFunction(() => [...document.querySelectorAll('img')].some(img => img.complete && img.naturalWidth > 0));
+                await page.screenshot({ path: 'screenshots/' + label + '.png', fullPage: true });
+                await page.close();
+              }
+            } finally {
+              await browser.close();
+            }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diary-archive-screenshots
+          path: screenshots/*.png
